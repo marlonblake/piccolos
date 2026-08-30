@@ -3,6 +3,7 @@ import Register from './pages/customer/CustomerRegister';
 import CustomerLogin from './pages/customer/CustomerLogin';
 import AdminLogin from './pages/admin/AdminLogin';
 import CustomerMenu from './components/CustomerMenu';
+import ShoppingCart from './pages/ShoppingCart';
 
 function Home() {
     const testSecureEndpoint = async () => {
@@ -34,6 +35,7 @@ function Home() {
                 <Link to="/login">Login</Link>
                 <Link to="/register">Register</Link>
                 <Link to="/menu">View Menu</Link> {/* <-- Added link to see Dev 4's work */}
+                <Link to="/cart">Shopping Cart</Link>
             </div>
             
             <button onClick={testSecureEndpoint} style={{ padding: '10px 20px', cursor: 'pointer', backgroundColor: '#e0e0e0', border: '1px solid #ccc' }}>
@@ -52,6 +54,7 @@ export default function App() {
         <Route path="/login" element={<CustomerLogin />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/menu" element={<CustomerMenu />} />
+          <Route path="/cart" element={<ShoppingCart />} />
       </Routes>
     </BrowserRouter>
   );
