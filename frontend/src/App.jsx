@@ -1,3 +1,4 @@
+import AdminMenu from './pages/admin/AdminMenu';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Register from './pages/customer/CustomerRegister';
 import CustomerLogin from './pages/customer/CustomerLogin';
@@ -49,6 +50,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+          <Route path="/admin/menu" element={<AdminMenu />} />
         <Route path="/" element={<Home />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<CustomerLogin />} />
