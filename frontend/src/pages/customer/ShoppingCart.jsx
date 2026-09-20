@@ -43,7 +43,6 @@ const ShoppingCart = () => {
         return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0).toFixed(2);
     };
 
-    // Renamed from handleCheckout to handlePlaceOrder
     const handlePlaceOrder = async () => {
         if (cartItems.length === 0) {
             alert("Your cart is empty!");
@@ -67,7 +66,6 @@ const ShoppingCart = () => {
             });
 
             if (response.ok) {
-                // Updated success message to match your business logic
                 alert("Order placed successfully! The admin has been notified.");
                 setCartItems([]);
             } else {
@@ -80,38 +78,42 @@ const ShoppingCart = () => {
     };
 
     return (
-        <div className="cart-container" style={{ padding: '20px', maxWidth: '600px', margin: 'auto', fontFamily: 'sans-serif' }}>
-            <h2 style={{ textAlign: 'center' }}>Your Order</h2>
+        <div className="min-h-screen bg-[#FDFBF7] py-12 px-4 font-sans text-[#2C3E2D]">
+            <div className="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
+                <h2 className="text-3xl font-serif font-bold text-center mb-8">Your Order</h2>
 
-            {cartItems.length === 0 ? (
-                <p style={{ textAlign: 'center' }}>Your cart is empty.</p>
-            ) : (
-                <div>
-                    {cartItems.map((item, index) => (
-                        <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid #555', paddingBottom: '10px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <button onClick={() => decreaseQuantity(index)} style={{ padding: '2px 8px', cursor: 'pointer', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px' }}>-</button>
-                                <span style={{ fontWeight: 'bold', width: '20px', textAlign: 'center' }}>{item.quantity}</span>
-                                <button onClick={() => increaseQuantity(index)} style={{ padding: '2px 8px', cursor: 'pointer', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '3px' }}>+</button>
-                                <span style={{ marginLeft: '10px' }}>{item.name}</span>
+                {cartItems.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8 text-lg">Your cart is empty.</p>
+                ) : (
+                    <div className="flex flex-col gap-2">
+                        {cartItems.map((item, index) => (
+                            <div key={index} className="flex justify-between items-center py-4 border-b border-gray-100">
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-3 bg-[#FDFBF7] px-2 py-1 rounded-full border border-gray-200">
+                                        <button onClick={() => decreaseQuantity(index)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors text-lg font-medium text-gray-600">-</button>
+                                        <span className="font-bold w-4 text-center">{item.quantity}</span>
+                                        <button onClick={() => increaseQuantity(index)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors text-lg font-medium text-gray-600">+</button>
+                                    </div>
+                                    <span className="font-medium text-lg">{item.name}</span>
+                                </div>
+                                <span className="font-semibold text-lg">LKR {(item.price * item.quantity).toFixed(2)}</span>
                             </div>
-                            <span>LKR {(item.price * item.quantity).toFixed(2)}</span>
+                        ))}
+                        
+                        <div className="flex justify-between items-center mt-8 pt-4 text-2xl font-bold">
+                            <span>Total:</span>
+                            <span>LKR {calculateTotal()}</span>
                         </div>
-                    ))}
-                    <br />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px' }}>
-                        <span>Total:</span>
-                        <span>LKR {calculateTotal()}</span>
+                        
+                        <button
+                            onClick={handlePlaceOrder}
+                            className="w-full mt-8 bg-[#D45D3C] hover:bg-[#B84A2E] text-white py-4 rounded-full text-lg font-semibold transition-all shadow-md"
+                        >
+                            Place Order
+                        </button>
                     </div>
-                    <br />
-                    <button
-                        onClick={handlePlaceOrder}
-                        style={{ width: '100%', padding: '12px', fontSize: '16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                    >
-                        Place Order
-                    </button>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 };
