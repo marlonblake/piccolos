@@ -36,24 +36,43 @@ function CustomerMenu() {
         return <p>No menu items available.</p>;
     }
 
+    // Group menu items by category name
+    // Example result: { "Pizza": [item1, item2], "Appetizers": [item3] }
+    const groupedByCategory = {};
+
+    menuItems.forEach(item => {
+        const categoryName = item.category?.name || "Uncategorized";
+
+        if (!groupedByCategory[categoryName]) {
+            groupedByCategory[categoryName] = [];
+        }
+
+        groupedByCategory[categoryName].push(item);
+    });
+
     return (
         <div>
             <h1>Piccolos Menu</h1>
 
-            {menuItems.map(item => (
-                <div key={item.id}>
-                    <h2>{item.name}</h2>
-                    <p>{item.description}</p>
-                    <p>Price: {item.price}</p>
-                    <p>Category: {item.category?.name}</p>
+            {Object.keys(groupedByCategory).map(categoryName => (
+                <div key={categoryName}>
+                    <h2>{categoryName}</h2>
 
-                    {item.imageUrl && (
-                        <img
-                            src={item.imageUrl}
-                            alt={item.name}
-                            width="200"
-                        />
-                    )}
+                    {groupedByCategory[categoryName].map(item => (
+                        <div key={item.id} style={{ marginBottom: "20px", paddingLeft: "10px" }}>
+                            <h3>{item.name}</h3>
+                            <p>{item.description}</p>
+                            <p>Price: {item.price}</p>
+
+                            {item.imageUrl && (
+                                <img
+                                    src={item.imageUrl}
+                                    alt={item.name}
+                                    width="200"
+                                />
+                            )}
+                        </div>
+                    ))}
                 </div>
             ))}
         </div>
