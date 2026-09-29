@@ -3,7 +3,8 @@ import Register from './pages/customer/CustomerRegister';
 import CustomerLogin from './pages/customer/CustomerLogin';
 import AdminLogin from './pages/admin/AdminLogin';
 import CustomerMenu from './components/CustomerMenu';
-import ShoppingCart from './pages/ShoppingCart';
+import CustomerPortal from './pages/customer/CustomerPortal';
+
 
 function Home() {
     const testSecureEndpoint = async () => {
@@ -54,7 +55,7 @@ export default function App() {
         <Route path="/login" element={<CustomerLogin />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/menu" element={<CustomerMenu />} />
-          <Route path="/cart" element={<ShoppingCart />} />
+          <Route path="/customer" element={<CustomerPortal />} />
       </Routes>
     </BrowserRouter>
   );
