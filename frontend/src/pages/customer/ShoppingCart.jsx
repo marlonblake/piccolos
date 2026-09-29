@@ -1,6 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-const ShoppingCart = ({ cartItems, setCartItems }) => {
+const ShoppingCart = () => {
+    const [cartItems, setCartItems] = useState([
+        { menuItemId: 1, name: "Margherita Pizza", price: 2000.00, quantity: 2 },
+        { menuItemId: 2, name: "Garlic Bread", price: 1000.00, quantity: 1 }
+    ]);
+
+    const addToCart = (menuItem) => {
+        const existingItemIndex = cartItems.findIndex(item => item.menuItemId === menuItem.menuItemId);
+
+        if (existingItemIndex >= 0) {
+            const newCart = [...cartItems];
+            newCart[existingItemIndex].quantity += 1;
+            setCartItems(newCart);
+        } else {
+            setCartItems([...cartItems, {
+                menuItemId: menuItem.menuItemId,
+                name: menuItem.name,
+                price: menuItem.price,
+                quantity: 1
+            }]);
+        }
+    };
 
     const increaseQuantity = (index) => {
         const newCart = [...cartItems];
@@ -18,11 +39,11 @@ const ShoppingCart = ({ cartItems, setCartItems }) => {
         setCartItems(newCart);
     };
 
-    // Updated calculations to include the 10% tax requirement
-    const subtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-    const taxAndFees = subtotal * 0.10;
-    const finalTotal = subtotal + taxAndFees;
+    const calculateTotal = () => {
+        return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0).toFixed(2);
+    };
 
+    // Renamed from handleCheckout to handlePlaceOrder
     const handlePlaceOrder = async () => {
         if (cartItems.length === 0) {
             alert("Your cart is empty!");
@@ -33,7 +54,7 @@ const ShoppingCart = ({ cartItems, setCartItems }) => {
             guestName: "Walk-in Guest",
             orderType: "PICKUP",
             items: cartItems.map(item => ({
-                menuItemId: item.menuItemId || item.id,
+                menuItemId: item.menuItemId,
                 quantity: item.quantity
             }))
         };
@@ -46,6 +67,7 @@ const ShoppingCart = ({ cartItems, setCartItems }) => {
             });
 
             if (response.ok) {
+                // Updated success message to match your business logic
                 alert("Order placed successfully! The admin has been notified.");
                 setCartItems([]);
             } else {
@@ -58,7 +80,7 @@ const ShoppingCart = ({ cartItems, setCartItems }) => {
     };
 
     return (
-        <div className="cart-container" style={{ padding: '20px', maxWidth: '600px', margin: 'auto', fontFamily: 'sans-serif', color: 'white' }}>
+        <div className="cart-container" style={{ padding: '20px', maxWidth: '600px', margin: 'auto', fontFamily: 'sans-serif' }}>
             <h2 style={{ textAlign: 'center' }}>Your Order</h2>
 
             {cartItems.length === 0 ? (
@@ -77,25 +99,14 @@ const ShoppingCart = ({ cartItems, setCartItems }) => {
                         </div>
                     ))}
                     <br />
-
-                    {/* New Price Breakdown Section */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', color: '#ccc', marginBottom: '5px' }}>
-                        <span>Subtotal:</span>
-                        <span>LKR {subtotal.toFixed(2)}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', color: '#ccc', marginBottom: '10px' }}>
-                        <span>Tax & Fees (10%):</span>
-                        <span>LKR {taxAndFees.toFixed(2)}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px', borderTop: '1px solid #555', paddingTop: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px' }}>
                         <span>Total:</span>
-                        <span>LKR {finalTotal.toFixed(2)}</span>
+                        <span>LKR {calculateTotal()}</span>
                     </div>
-
                     <br />
                     <button
                         onClick={handlePlaceOrder}
-                        style={{ width: '100%', padding: '12px', fontSize: '16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                        style={{ width: '100%', padding: '12px', fontSize: '16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                     >
                         Place Order
                     </button>
