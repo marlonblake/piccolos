@@ -8,6 +8,7 @@ import AdminLogin from './pages/admin/AdminLogin';
 import CustomerMenu from './components/CustomerMenu';
 import ShoppingCart from './pages/customer/ShoppingCart';
 import Home from './pages/customer/Home';
+import Booking from './pages/customer/Booking';
 
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -29,6 +30,7 @@ export default function App() {
                         <Route path="/admin/menu" element={<AdminMenu />} />
                         <Route path="/menu" element={<CustomerMenu />} />
                         <Route path="/cart" element={<ShoppingCart />} />
+                        <Route path="/booking" element={<Booking />} />
                     </Routes>
                 </main>
 

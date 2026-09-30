@@ -110,9 +110,12 @@ export default function Home() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-5 w-full sm:w-auto">
-            <button className="bg-[#FDFBF7] text-[#2C3E2D] hover:bg-gray-100 px-8 py-4 rounded-full text-xl font-semibold transition-all shadow-xl hover:scale-105">
+            <Link
+                to="/booking"
+                className="bg-[#FDFBF7] text-[#2C3E2D] hover:bg-gray-100 px-8 py-4 rounded-full text-xl font-semibold transition-all shadow-xl hover:scale-105 text-center"
+            >
               Book a Table
-            </button>
+            </Link>
             <Link to="/menu" className="bg-[#D45D3C] hover:bg-[#B84A2E] text-white px-8 py-4 rounded-full text-xl font-semibold transition-all shadow-xl hover:scale-105 text-center">
               Order for Pickup
             </Link>

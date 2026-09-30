@@ -53,6 +53,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/menu").permitAll()
                         .requestMatchers("/api/categories").permitAll()
+                        .requestMatchers("/api/reservations/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/customer/**").hasRole("USER")
                         .anyRequest().authenticated()
