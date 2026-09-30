@@ -77,3 +77,53 @@ Do not push directly to the `main` branch. Follow these steps for new features:
    git push origin feature/your-feature-name
    ```
 5. **Create a Pull Request** on GitHub.
+## ?? Local Setup
+
+### 1. Clone and pull the branch
+
+git checkout feature/dev4-menu
+git pull origin feature/dev4-menu
+
+
+### 2. Set up the database
+Create the database:
+
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS piccolos_db;"
+
+
+Import the shared data dump (tables, categories, sample menu items, admin account):
+
+mysql -u root -p piccolos_db < database/piccolos_db_dump.sql
+
+
+### 3. Set your MySQL password as an environment variable
+The backend reads your MySQL password from an environment variable instead of storing it in the code. Before running the backend, set your **own** local MySQL root password:
+
+$env:DB_PASSWORD="your_own_mysql_password"
+
+This only lasts for the current terminal session — you'll need to set it again if you open a new terminal.
+
+### 4. Run the backend
+
+cd backend
+.\mvnw.cmd spring-boot:run
+
+Should start on http://localhost:8081.
+
+### 5. Run the frontend
+
+cd frontend
+npm install
+npm run dev
+
+Should start on http://localhost:5173.
+
+### 6. Test admin login
+Use the shared test admin account (included in the database dump):
+- Email: `admin@piccolos.com`
+- Password: `admin123`
+
+Log in at http://localhost:5173/admin/login — you'll be redirected to the Admin Dashboard.
+
+### Food images
+Sample food photos are included under rontend/public/food-images/ and are already linked to the sample menu items in the database dump.
