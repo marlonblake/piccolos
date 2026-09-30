@@ -1,4 +1,4 @@
-package com.piccolos.backend.dto;
+package com.example.piccolos.dto;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

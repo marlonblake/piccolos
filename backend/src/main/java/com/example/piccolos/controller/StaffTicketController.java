@@ -1,9 +1,9 @@
-package com.piccolos.backend.controller;
+package com.example.piccolos.controller;
 
-import com.piccolos.backend.dto.AddItemRequest;
-import com.piccolos.backend.dto.InvoiceDto;
-import com.piccolos.backend.dto.OrderDto;
-import com.piccolos.backend.service.TicketService;
+import com.example.piccolos.dto.AddItemRequest;
+import com.example.piccolos.dto.InvoiceDto;
+import com.example.piccolos.dto.OrderDto;
+import com.example.piccolos.service.TicketService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 

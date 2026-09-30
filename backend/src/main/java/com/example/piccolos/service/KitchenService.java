@@ -1,9 +1,9 @@
-package com.piccolos.backend.service;
+package com.example.piccolos.service;
 
 import com.example.piccolos.entity.Order;
-import com.piccolos.backend.dto.OrderDto;
-import com.piccolos.backend.model.OrderStatus;
-import com.piccolos.backend.repository.StaffOrderRepository;
+import com.example.piccolos.dto.OrderDto;
+import com.example.piccolos.model.OrderStatus;
+import com.example.piccolos.repository.StaffOrderRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

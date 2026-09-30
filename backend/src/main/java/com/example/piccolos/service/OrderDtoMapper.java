@@ -1,9 +1,9 @@
-package com.piccolos.backend.service;
+package com.example.piccolos.service;
 
 import com.example.piccolos.entity.MenuItem;
 import com.example.piccolos.entity.Order;
-import com.piccolos.backend.dto.OrderDto;
-import com.piccolos.backend.repository.StaffOrderItemRepository;
+import com.example.piccolos.dto.OrderDto;
+import com.example.piccolos.repository.StaffOrderItemRepository;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;

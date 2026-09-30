@@ -1,4 +1,4 @@
-package com.piccolos.backend.dto;
+package com.example.piccolos.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

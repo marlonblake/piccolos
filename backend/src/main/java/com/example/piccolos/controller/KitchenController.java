@@ -1,8 +1,8 @@
-package com.piccolos.backend.controller;
+package com.example.piccolos.controller;
 
-import com.piccolos.backend.dto.OrderDto;
-import com.piccolos.backend.model.OrderStatus;
-import com.piccolos.backend.service.KitchenService;
+import com.example.piccolos.dto.OrderDto;
+import com.example.piccolos.model.OrderStatus;
+import com.example.piccolos.service.KitchenService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

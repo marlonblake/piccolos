@@ -1,4 +1,4 @@
-package com.piccolos.backend.repository;
+package com.example.piccolos.repository;
 
 import com.example.piccolos.entity.Order;
 import org.springframework.data.jpa.repository.JpaRepository;
