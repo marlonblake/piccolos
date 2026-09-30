@@ -43,7 +43,6 @@ const ShoppingCart = () => {
         return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0).toFixed(2);
     };
 
-    // Renamed from handleCheckout to handlePlaceOrder
     const handlePlaceOrder = async () => {
         if (cartItems.length === 0) {
             alert("Your cart is empty!");
@@ -67,7 +66,6 @@ const ShoppingCart = () => {
             });
 
             if (response.ok) {
-                // Updated success message to match your business logic
                 alert("Order placed successfully! The admin has been notified.");
                 setCartItems([]);
             } else {
@@ -80,7 +78,8 @@ const ShoppingCart = () => {
     };
 
     return (
-        <div className="cart-container" style={{ padding: '20px', maxWidth: '600px', margin: 'auto', fontFamily: 'sans-serif' }}>
+        // Added 120px top padding to clear the fixed navbar, and removed the duplicate Nav/Footer
+        <div className="cart-container" style={{ padding: '120px 20px 40px', maxWidth: '600px', margin: 'auto', fontFamily: 'sans-serif', minHeight: '70vh' }}>
             <h2 style={{ textAlign: 'center' }}>Your Order</h2>
 
             {cartItems.length === 0 ? (
