@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
+import "./AdminMenu.css";
 
 function AdminMenu() {
-
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [price, setPrice] = useState("");
@@ -10,33 +10,30 @@ function AdminMenu() {
 
     const [categories, setCategories] = useState([]);
     const [menuItems, setMenuItems] = useState([]);
-
-    // If this is not null, we're editing that item instead of adding a new one
     const [editingId, setEditingId] = useState(null);
 
-    // Fetch categories once, when the page first loads
+    const [showForm, setShowForm] = useState(false);
+    const [search, setSearch] = useState("");
+    const [activeCategory, setActiveCategory] = useState("all");
+
     useEffect(() => {
         const fetchCategories = async () => {
             try {
                 const response = await fetch("http://localhost:8081/api/categories");
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-                setCategories(data);
+                setCategories(await response.json());
             } catch (error) {
                 console.error("Error fetching categories:", error);
             }
         };
-
         fetchCategories();
     }, []);
 
-    // Fetch menu items — pulled into its own function so we can re-call it after add/edit/delete
     const fetchMenuItems = async () => {
         try {
             const response = await fetch("http://localhost:8081/api/menu");
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const data = await response.json();
-            setMenuItems(data);
+            setMenuItems(await response.json());
         } catch (error) {
             console.error("Error fetching menu items:", error);
         }
@@ -53,36 +50,29 @@ function AdminMenu() {
         setImageUrl("");
         setCategoryId("");
         setEditingId(null);
+        setShowForm(false);
     };
 
     const handleSubmit = async (event) => {
         event.preventDefault();
 
         const menuItem = {
-            name: name,
-            description: description,
+            name,
+            description,
             price: Number(price),
-            category: {
-                id: Number(categoryId)
-            },
-            imageUrl: imageUrl
+            category: { id: Number(categoryId) },
+            imageUrl
         };
 
         const adminToken = localStorage.getItem("adminToken");
-
-        // If editingId is set, we're updating an existing item (PUT).
-        // Otherwise, we're adding a brand new one (POST).
         const isEditing = editingId !== null;
         const url = isEditing
             ? `http://localhost:8081/api/admin/menu/${editingId}`
             : "http://localhost:8081/api/admin/menu";
-        const method = isEditing ? "PUT" : "POST";
-
-        console.log(`${method} to ${url}:`, menuItem);
 
         try {
             const response = await fetch(url, {
-                method: method,
+                method: isEditing ? "PUT" : "POST",
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${adminToken}`
@@ -95,21 +85,15 @@ function AdminMenu() {
                 throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
 
-            const result = await response.json();
-            console.log(isEditing ? "Menu item updated:" : "Menu item added:", result);
-
-            alert(isEditing ? "Menu item updated successfully!" : "Menu item added successfully!");
-
+            await response.json();
             resetForm();
-            fetchMenuItems(); // refresh the list so the change shows up immediately
-
+            fetchMenuItems();
         } catch (error) {
             console.error("Error saving menu item:", error);
             alert("Failed to save menu item. Check the browser console.");
         }
     };
 
-    // Called when the admin clicks "Edit" on a specific item
     const handleEditClick = (item) => {
         setEditingId(item.id);
         setName(item.name);
@@ -117,24 +101,18 @@ function AdminMenu() {
         setPrice(item.price);
         setImageUrl(item.imageUrl || "");
         setCategoryId(item.category?.id || "");
-
-        // Scroll up to the form so the admin sees what they're editing
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        setShowForm(true);
     };
 
-    // Called when the admin clicks "Delete" on a specific item
     const handleDelete = async (id) => {
-        const confirmed = window.confirm("Are you sure you want to delete this menu item?");
-        if (!confirmed) return;
+        if (!window.confirm("Are you sure you want to delete this menu item?")) return;
 
         const adminToken = localStorage.getItem("adminToken");
 
         try {
             const response = await fetch(`http://localhost:8081/api/admin/menu/${id}`, {
                 method: "DELETE",
-                headers: {
-                    "Authorization": `Bearer ${adminToken}`
-                }
+                headers: { "Authorization": `Bearer ${adminToken}` }
             });
 
             if (!response.ok) {
@@ -142,124 +120,132 @@ function AdminMenu() {
                 throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
 
-            console.log("Menu item deleted:", id);
-            fetchMenuItems(); // refresh the list
-
+            fetchMenuItems();
         } catch (error) {
             console.error("Error deleting menu item:", error);
             alert("Failed to delete menu item. Check the browser console.");
         }
     };
 
+    // Filter by selected category pill and by search text
+    const visibleItems = menuItems.filter((item) => {
+        const matchesCategory = activeCategory === "all" || item.category?.id === activeCategory;
+        const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
+        return matchesCategory && matchesSearch;
+    });
+
+    const countFor = (catId) => menuItems.filter((i) => i.category?.id === catId).length;
+
     return (
-        <div>
-            <h1>Admin Menu Management</h1>
+        <div className="am-layout">
 
-            <h2>{editingId !== null ? "Edit Menu Item" : "Add Menu Item"}</h2>
+            <aside className="am-sidebar">
+                <button className="am-side-btn active" title="Menu">🍽️</button>
+                <button className="am-side-btn" title="Orders">📝</button>
+                <button className="am-side-btn" title="Reservations">🪑</button>
+                <button className="am-side-btn" title="Reports">📈</button>
+                <div className="am-side-spacer" />
+                <button className="am-side-btn" title="Settings">⚙️</button>
+            </aside>
 
-            <form onSubmit={handleSubmit}>
+            <main className="am-main">
 
-                <div>
-                    <label>Food Name</label>
-                    <br />
+                <div className="am-topbar">
                     <input
+                        className="am-search"
                         type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Margherita Pizza"
+                        placeholder="Search menu items"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
                     />
+                    <button className="am-add-btn" onClick={() => setShowForm(true)}>
+                        + Add Menu Item
+                    </button>
                 </div>
 
-                <br />
-
-                <div>
-                    <label>Description</label>
-                    <br />
-                    <input
-                        type="text"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Describe the food"
-                    />
-                </div>
-
-                <br />
-
-                <div>
-                    <label>Price</label>
-                    <br />
-                    <input
-                        type="number"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        placeholder="e.g. 2500"
-                    />
-                </div>
-
-                <br />
-
-                <div>
-                    <label>Category</label>
-                    <br />
-                    <select
-                        value={categoryId}
-                        onChange={(e) => setCategoryId(e.target.value)}
+                <div className="am-pills">
+                    <button
+                        className={`am-pill ${activeCategory === "all" ? "active" : ""}`}
+                        onClick={() => setActiveCategory("all")}
                     >
-                        <option value="">-- Select a category --</option>
-                        {categories.map((category) => (
-                            <option key={category.id} value={category.id}>
-                                {category.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <br />
-
-                <div>
-                    <label>Image URL</label>
-                    <br />
-                    <input
-                        type="text"
-                        value={imageUrl}
-                        onChange={(e) => setImageUrl(e.target.value)}
-                        placeholder="Paste image URL"
-                    />
-                </div>
-
-                <br />
-
-                <button type="submit">
-                    {editingId !== null ? "Update Menu Item" : "Add Menu Item"}
-                </button>
-
-                {editingId !== null && (
-                    <button type="button" onClick={resetForm} style={{ marginLeft: "10px" }}>
-                        Cancel Edit
+                        <strong>All Menu</strong>
+                        <span>{menuItems.length} items</span>
                     </button>
-                )}
 
-            </form>
-
-            <hr style={{ margin: "30px 0" }} />
-
-            <h2>Existing Menu Items</h2>
-
-            {menuItems.length === 0 && <p>No menu items yet.</p>}
-
-            {menuItems.map((item) => (
-                <div key={item.id} style={{ border: "1px solid #ccc", padding: "10px", marginBottom: "10px" }}>
-                    <h3>{item.name}</h3>
-                    <p>{item.description}</p>
-                    <p>Price: {item.price}</p>
-                    <p>Category: {item.category?.name}</p>
-
-                    <button onClick={() => handleEditClick(item)}>Edit</button>
-                    <button onClick={() => handleDelete(item.id)} style={{ marginLeft: "10px" }}>
-                        Delete
-                    </button>
+                    {categories.map((cat) => (
+                        <button
+                            key={cat.id}
+                            className={`am-pill ${activeCategory === cat.id ? "active" : ""}`}
+                            onClick={() => setActiveCategory(cat.id)}
+                        >
+                            <strong>{cat.name}</strong>
+                            <span>{countFor(cat.id)} items</span>
+                        </button>
+                    ))}
                 </div>
-            ))}
+
+                {visibleItems.length === 0 && <p className="am-empty">No menu items found.</p>}
+
+                <div className="am-grid">
+                    {visibleItems.map((item) => (
+                        <div className="am-card" key={item.id}>
+                            {item.imageUrl ? (
+                                <img src={item.imageUrl} alt={item.name} />
+                            ) : (
+                                <div className="am-img-placeholder">🍕</div>
+                            )}
+
+                            <div className="am-card-body">
+                                <h3>{item.name}</h3>
+                                <p>{item.description}</p>
+
+                                <div className="am-card-footer">
+                                    <span className="am-price">{Number(item.price).toLocaleString()}</span>
+                                    <div className="am-actions">
+                                        <button className="am-btn secondary" onClick={() => handleEditClick(item)}>Edit</button>
+                                        <button className="am-btn" onClick={() => handleDelete(item.id)}>Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </main>
+
+            {showForm && (
+                <div className="am-overlay">
+                    <form className="am-modal" onSubmit={handleSubmit}>
+                        <h2>{editingId !== null ? "Edit Menu Item" : "Add Menu Item"}</h2>
+
+                        <label>Food Name</label>
+                        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Margherita Pizza" required />
+
+                        <label>Description</label>
+                        <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe the food" required />
+
+                        <label>Price</label>
+                        <input type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="e.g. 2500" required />
+
+                        <label>Category</label>
+                        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
+                            <option value="">-- Select a category --</option>
+                            {categories.map((cat) => (
+                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                        </select>
+
+                        <label>Image URL</label>
+                        <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Paste image URL" />
+
+                        <div className="am-modal-actions">
+                            <button type="button" className="am-btn secondary" onClick={resetForm}>Cancel</button>
+                            <button type="submit" className="am-btn">
+                                {editingId !== null ? "Update" : "Add"}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
         </div>
     );
 }

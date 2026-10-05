@@ -1,3 +1,4 @@
+import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminMenu from './pages/admin/AdminMenu';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
@@ -7,6 +8,7 @@ import AdminLogin from './pages/admin/AdminLogin';
 import CustomerMenu from './components/CustomerMenu';
 import ShoppingCart from './pages/customer/ShoppingCart';
 import Home from './pages/customer/Home';
+import Booking from './pages/customer/Booking';
 
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -20,6 +22,7 @@ export default function App() {
 
                 <main className="flex-grow">
                     <Routes>
+                        <Route path="/admin/dashboard" element={<AdminDashboard />} />
                         <Route path="/" element={<Home />} />
                         <Route path="/register" element={<Register />} />
                         <Route path="/login" element={<CustomerLogin />} />
@@ -27,6 +30,7 @@ export default function App() {
                         <Route path="/admin/menu" element={<AdminMenu />} />
                         <Route path="/menu" element={<CustomerMenu />} />
                         <Route path="/cart" element={<ShoppingCart />} />
+                        <Route path="/booking" element={<Booking />} />
                     </Routes>
                 </main>
 

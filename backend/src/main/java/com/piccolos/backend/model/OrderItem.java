@@ -1,4 +1,4 @@
-package com.example.piccolos.entity;
+package com.piccolos.backend.model;
 
 import jakarta.persistence.*;
 
@@ -10,20 +10,21 @@ public class OrderItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String menuItemName;
     private Integer quantity;
-
     private Double price;
 
     @ManyToOne
     @JoinColumn(name = "order_id")
     private Order order;
 
-    @ManyToOne
-    @JoinColumn(name = "menu_item_id")
-    private MenuItem menuItem;
+    public OrderItem() {}
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public String getMenuItemName() { return menuItemName; }
+    public void setMenuItemName(String menuItemName) { this.menuItemName = menuItemName; }
 
     public Integer getQuantity() { return quantity; }
     public void setQuantity(Integer quantity) { this.quantity = quantity; }
@@ -33,7 +34,4 @@ public class OrderItem {
 
     public Order getOrder() { return order; }
     public void setOrder(Order order) { this.order = order; }
-
-    public MenuItem getMenuItem() { return menuItem; }
-    public void setMenuItem(MenuItem menuItem) { this.menuItem = menuItem; }
 }
