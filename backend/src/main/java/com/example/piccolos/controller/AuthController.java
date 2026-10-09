@@ -85,4 +85,14 @@ public class AuthController {
             return ResponseEntity.status(404).body(e.getMessage());
         }
     }
+
+    @PostMapping("/admin/register")
+    public ResponseEntity<String> registerAdmin(@RequestBody LoginRequest request) {
+        try {
+            String result = authService.registerAdmin(request);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }
