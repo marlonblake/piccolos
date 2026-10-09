@@ -2,6 +2,7 @@ package com.example.piccolos.service;
 
 import com.example.piccolos.dto.LoginRequest;
 import com.example.piccolos.dto.RegisterRequest;
+import com.example.piccolos.dto.UpdateProfileRequest;
 import com.example.piccolos.entity.Admin;
 import com.example.piccolos.entity.User;
 import com.example.piccolos.repository.AdminRepository;
@@ -9,6 +10,7 @@ import com.example.piccolos.repository.UserRepository;
 import com.example.piccolos.security.JwtUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.example.piccolos.dto.AuthResponse;
 
 import java.util.Optional;
 
@@ -28,6 +30,7 @@ public class AuthService {
         this.jwtUtil = jwtUtil;
     }
 
+    // CREATE
     public String registerUser(RegisterRequest request) {
         // 1. Check if email already exists
         Optional<User> existingUser = userRepository.findByEmail(request.getEmail());
@@ -52,7 +55,8 @@ public class AuthService {
         return "User registered successfully!";
     }
 
-    public String loginUser(LoginRequest request) {
+    // READ (Auth)
+    public AuthResponse loginUser(LoginRequest request) {
         // 1. Find user
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("Invalid email or password"));
@@ -63,9 +67,13 @@ public class AuthService {
         }
 
         // 3. Generate Token
-        return jwtUtil.generateToken(user.getEmail(), "USER");
+        String token = jwtUtil.generateToken(user.getEmail(), "USER");
+
+        // 4. Return both the token and the ID
+        return new AuthResponse(token, user.getId());
     }
 
+    // READ (Auth Admin)
     public String loginAdmin(LoginRequest request) {
         // 1. Find admin
         Admin admin = adminRepository.findByEmail(request.getEmail())
@@ -78,5 +86,40 @@ public class AuthService {
 
         // 3. Generate Token
         return jwtUtil.generateToken(admin.getEmail(), "ADMIN");
+    }
+
+    // READ (Profile Data)
+    public User getUserProfile(Integer id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + id));
+    }
+
+    // UPDATE
+    public String updateUserProfile(Integer id, UpdateProfileRequest request) {
+        // 1. Find the existing user
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + id));
+
+        // 2. Update allowed fields
+        existingUser.setFname(request.getFname());
+        existingUser.setLname(request.getLname());
+        existingUser.setPhoneNumber(request.getPhoneNumber());
+
+        // 3. Save the changes
+        userRepository.save(existingUser);
+
+        return "Profile updated successfully!";
+    }
+
+    // DELETE
+    public String deleteUserAccount(Integer id) {
+        // 1. Find the existing user
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + id));
+
+        // 2. Delete the user from the database
+        userRepository.delete(existingUser);
+
+        return "Account deleted successfully!";
     }
 }

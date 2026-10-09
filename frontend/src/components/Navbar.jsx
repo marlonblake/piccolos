@@ -5,6 +5,10 @@ import { Menu, X, ShoppingBag, User } from 'lucide-react';
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  
+  // NEW: State to track if the user is logged in
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
   const location = useLocation();
 
   useEffect(() => {
@@ -13,8 +17,13 @@ export default function Navbar() {
     };
 
     window.addEventListener('scroll', handleScroll);
+    
+    // NEW: Check for token on component mount and whenever location changes
+    const token = localStorage.getItem('customerToken');
+    setIsLoggedIn(!!token);
+
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [location]); // Re-run token check when route changes
 
   const isActive = (path) => location.pathname === path;
   
@@ -35,6 +44,10 @@ export default function Navbar() {
   const linkBaseClass = `uppercase tracking-[0.15em] text-sm font-semibold pb-1 border-b-2 transition-all ${textColors}`;
   const activeClass = "border-[#FDFBF7]";
   const inactiveClass = `border-transparent ${hoverText}`;
+  
+  // NEW: Determine where the user icon should point
+  const userIconPath = isLoggedIn ? "/profile" : "/login";
+  const userIconTitle = isLoggedIn ? "My Profile" : "Log In / Register";
 
   return (
     <nav className={`fixed w-full top-0 z-50 transition-all duration-500 font-sans ${navBackground}`}>
@@ -81,10 +94,11 @@ export default function Navbar() {
             <div className="flex items-center space-x-4">
               <div className="w-px h-8 bg-[#FDFBF7]/30 mr-2"></div>
               
+              {/* UPDATED: Dynamic Link based on auth state */}
               <Link 
-                to="/login" 
+                to={userIconPath} 
                 className={`w-11 h-11 rounded-full border border-[#FDFBF7]/30 flex items-center justify-center ${textColors} hover:border-[#FDFBF7] transition-colors`}
-                title="Log In / Register"
+                title={userIconTitle}
               >
                 <User size={20} strokeWidth={1.5} />
               </Link>
@@ -114,7 +128,8 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center space-x-4">
-            <Link to="/login" className={`${textColors}`}>
+             {/* UPDATED: Dynamic Link for mobile as well */}
+            <Link to={userIconPath} className={`${textColors}`} title={userIconTitle}>
               <User size={24} />
             </Link>
             <Link to="/cart" className={`${textColors}`}>

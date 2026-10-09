@@ -5,36 +5,38 @@ import { FaFacebook } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
 
 export default function CustomerLogin() {
-  // Your original state variables
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   
   const navigate = useNavigate();
 
-  // Your original login logic
+  // The login logic must be wrapped inside this handleLogin function
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setMessage(''); // Clear previous messages
-    
+    e.preventDefault(); // Prevents the page from refreshing on form submit
+    setMessage(''); // Clears any previous error messages
+
     try {
-      // Your exact Spring Boot endpoint
       const response = await fetch('http://localhost:8081/api/auth/user/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
 
-      const data = await response.text();
-
       if (response.ok) {
-        // 1. Save the JWT token to Local Storage
-        localStorage.setItem('customerToken', data);
+        // 1. Parse the JSON response instead of text
+        const data = await response.json();
         
-        // 2. Redirect the user to the home page
+        // 2. Save BOTH the token and the userId to Local Storage
+        localStorage.setItem('customerToken', data.token);
+        localStorage.setItem('userId', data.userId);
+        
+        // 3. Redirect the user to the home page
         navigate('/'); 
       } else {
-        setMessage(`Login Failed: ${data}`);
+        // If it fails (like a 401), it still returns a text error message from the controller
+        const errData = await response.text();
+        setMessage(`Login Failed: ${errData}`);
       }
     } catch (error) {
       setMessage("Network error. Is the backend running?");

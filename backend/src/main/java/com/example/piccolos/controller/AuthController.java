@@ -1,14 +1,12 @@
 package com.example.piccolos.controller;
 
 import com.example.piccolos.dto.RegisterRequest;
-import com.example.piccolos.service.AuthService;
 import com.example.piccolos.dto.LoginRequest;
+import com.example.piccolos.dto.UpdateProfileRequest;
+import com.example.piccolos.service.AuthService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import com.example.piccolos.dto.AuthResponse;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -22,36 +20,69 @@ public class AuthController {
         this.authService = authService;
     }
 
+    // CREATE: Register a new customer
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody RegisterRequest request) {
         try {
-            // Pass the data to the Service layer
             String result = authService.registerUser(request);
-            // Return a 200 OK status with the success message
             return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
-            // If the email is taken, return a 400 Bad Request with the error message
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
+    // READ: Authenticate customer and issue JWT
     @PostMapping("/user/login")
-    public ResponseEntity<String> loginUser(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> loginUser(@RequestBody LoginRequest request) {
         try {
-            String token = authService.loginUser(request);
-            return ResponseEntity.ok(token); // Returns the JWT
+            AuthResponse response = authService.loginUser(request);
+            return ResponseEntity.ok(response); // Returns JSON: { "token": "ey...", "userId": 1 }
         } catch (RuntimeException e) {
-            return ResponseEntity.status(401).body(e.getMessage()); // 401 Unauthorized
+            return ResponseEntity.status(401).body(e.getMessage());
         }
     }
 
+    // READ: Authenticate staff/admin and issue JWT
     @PostMapping("/admin/login")
     public ResponseEntity<String> loginAdmin(@RequestBody LoginRequest request) {
         try {
             String token = authService.loginAdmin(request);
-            return ResponseEntity.ok(token); // Returns the JWT
+            return ResponseEntity.ok(token);
         } catch (RuntimeException e) {
             return ResponseEntity.status(401).body(e.getMessage());
+        }
+    }
+
+    // READ: Fetch specific user profile details for the frontend settings page
+    @GetMapping("/user/{id}")
+    public ResponseEntity<?> getUserProfile(@PathVariable Integer id) {
+        try {
+            Object userProfile = authService.getUserProfile(id);
+            return ResponseEntity.ok(userProfile);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
+        }
+    }
+
+    // UPDATE: Modify profile details (e.g., name, phone number)
+    @PutMapping("/user/{id}")
+    public ResponseEntity<String> updateUserProfile(@PathVariable Integer id, @RequestBody UpdateProfileRequest request) {
+        try {
+            String result = authService.updateUserProfile(id, request);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // DELETE: Remove or deactivate a user account
+    @DeleteMapping("/user/{id}")
+    public ResponseEntity<String> deleteUserAccount(@PathVariable Integer id) {
+        try {
+            String result = authService.deleteUserAccount(id);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
         }
     }
 }

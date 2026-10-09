@@ -9,6 +9,7 @@ import CustomerMenu from './components/CustomerMenu';
 import ShoppingCart from './pages/customer/ShoppingCart';
 import Home from './pages/customer/Home';
 import Booking from './pages/customer/Booking';
+import CustomerProfile from './pages/customer/CustomerProfile';
 
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -31,6 +32,7 @@ export default function App() {
                         <Route path="/menu" element={<CustomerMenu />} />
                         <Route path="/cart" element={<ShoppingCart />} />
                         <Route path="/booking" element={<Booking />} />
+                        <Route path="/profile" element={<CustomerProfile />} />
                     </Routes>
                 </main>
 
