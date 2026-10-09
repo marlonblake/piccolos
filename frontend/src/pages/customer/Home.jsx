@@ -39,23 +39,23 @@ export default function Home() {
     setCurrentReview((prev) => (prev === 0 ? reviews.length - 1 : prev - 1));
   };
 
-  const testSecureEndpoint = async () => {
-    const token = localStorage.getItem('customerToken');
-    try {
-      const response = await fetch('http://localhost:8081/api/customer/dashboard', {
-        method: 'GET',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.text();
-        alert(data); 
-      } else {
-        alert("Access Denied! Status: " + response.status); 
-      }
-    } catch (error) {
-      alert("Network Error");
-    }
-  };
+  // const testSecureEndpoint = async () => {
+  //   const token = localStorage.getItem('customerToken');
+  //   try {
+  //     const response = await fetch('http://localhost:8081/api/customer/dashboard', {
+  //       method: 'GET',
+  //       headers: { 'Authorization': `Bearer ${token}` }
+  //     });
+  //     if (response.ok) {
+  //       const data = await response.text();
+  //       alert(data); 
+  //     } else {
+  //       alert("Access Denied! Status: " + response.status); 
+  //     }
+  //   } catch (error) {
+  //     alert("Network Error");
+  //   }
+  // };
 
   return (
     <div className="bg-[#FDFBF7] font-sans text-[#2C3E2D]">

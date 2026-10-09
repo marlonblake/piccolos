@@ -88,6 +88,22 @@ public class AuthService {
         return jwtUtil.generateToken(admin.getEmail(), "ADMIN");
     }
 
+    public String registerAdmin(LoginRequest request) {
+        Optional<Admin> existingAdmin = adminRepository.findByEmail(request.getEmail());
+        if (existingAdmin.isPresent()) {
+            throw new RuntimeException("Admin email is already taken!");
+        }
+
+        Admin newAdmin = new Admin();
+        newAdmin.setEmail(request.getEmail());
+
+        String hashedPassword = passwordEncoder.encode(request.getPassword());
+        newAdmin.setPasswordHash(hashedPassword);
+
+        adminRepository.save(newAdmin);
+        return "Admin registered successfully!";
+    }
+
     // READ (Profile Data)
     public User getUserProfile(Integer id) {
         return userRepository.findById(id)
