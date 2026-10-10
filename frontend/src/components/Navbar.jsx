@@ -10,6 +10,18 @@ export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   const location = useLocation();
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    const updateCartCount = () => {
+      const cart = JSON.parse(localStorage.getItem('piccolos_cart')) || [];
+      const totalItems = cart.reduce((total, item) => total + (item.quantity || 1), 0);
+      setCartCount(totalItems);
+    };
+    updateCartCount(); // Run once on load
+    window.addEventListener('cartUpdated', updateCartCount);
+    return () => window.removeEventListener('cartUpdated', updateCartCount);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -109,6 +121,11 @@ export default function Navbar() {
                 title="Cart"
               >
                 <ShoppingBag size={20} strokeWidth={1.5} />
+                {cartCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                    {cartCount}
+                  </span>
+                )}
               </Link>
             </div>
             
@@ -134,6 +151,11 @@ export default function Navbar() {
             </Link>
             <Link to="/cart" className={`${textColors}`}>
               <ShoppingBag size={24} />
+              {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-2 bg-red-600 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+                  {cartCount}
+                </span>
+              )}
             </Link>
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
