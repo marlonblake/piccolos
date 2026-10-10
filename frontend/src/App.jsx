@@ -62,12 +62,12 @@ export default function App() {
                 {/* ADMIN ROUTES - Wrapped in AdminLayout */}
                 <Route element={<AdminLayout />}>
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                    <Route path="/admin/menu" element={<AdminMenu />} />
                     <Route path="/admin/register" element={<AdminRegister />} />
                 </Route>
 
-                {/* STANDALONE ROUTE - No layout wrappers (perfect for a clean login screen) */}
+                {/* STANDALONE ROUTES - no layout wrappers */}
                 <Route path="/admin" element={<AdminLogin />} />
+                <Route path="/admin/menu" element={<AdminMenu />} />
 
             </Routes>
         </BrowserRouter>
