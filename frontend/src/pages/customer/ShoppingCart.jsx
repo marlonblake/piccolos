@@ -7,6 +7,7 @@ const ShoppingCart = () => {
         return savedCart ? JSON.parse(savedCart) : [];
     });
     const [orderSuccess, setOrderSuccess] = useState(false);
+    const [toastMessage, setToastMessage] = useState("");
     const navigate = useNavigate();
 
     const updateCartState = (newCart) => {
@@ -31,6 +32,20 @@ const ShoppingCart = () => {
         updateCartState(newCart);
     };
 
+    const deleteItem = (index) => {
+        const newCart = [...cartItems];
+        newCart.splice(index, 1);
+        updateCartState(newCart);
+    };
+
+    const clearCart = () => {
+        updateCartState([]);
+        setToastMessage("Cart cleared!");
+        setTimeout(() => {
+            setToastMessage("");
+        }, 3000);
+    };
+
     const calculateTotal = () => {
         return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0).toFixed(2);
     };
@@ -44,11 +59,11 @@ const ShoppingCart = () => {
         const orderPayload = {
             guestName: "Walk-in Guest",
             orderType: "PICKUP",
-            total: Number(calculateTotal()), // <-- Added to fix NULL in total_amount
+            total: Number(calculateTotal()),
             items: cartItems.map(item => ({
                 menuItemId: item.menuItemId,
                 quantity: item.quantity,
-                price: item.price // <-- Added to fix NULL in order_items price
+                price: item.price
             }))
         };
 
@@ -91,13 +106,17 @@ const ShoppingCart = () => {
         );
     }
 
+    const totalItemsCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+
     return (
-        <div style={{ padding: '140px 20px 60px', maxWidth: '850px', margin: 'auto', fontFamily: 'sans-serif', minHeight: '75vh' }}>
+        <div style={{ padding: '140px 20px 60px', maxWidth: '850px', margin: 'auto', fontFamily: 'sans-serif', minHeight: '75vh', position: 'relative' }}>
+
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '30px', gap: '15px' }}>
-                <div style={{ width: '50px', height: '50px', backgroundColor: '#8e2420', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '24px' }}>
-                    🛒
+                <button onClick={() => navigate('/menu')} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#1a1a1a' }}>←</button>
+                <div>
+                    <h2 style={{ margin: 0, fontSize: '32px', fontWeight: '900', color: '#1a1a1a' }}>Your Cart</h2>
+                    <p style={{ margin: '4px 0 0 0', color: '#888', fontSize: '16px', fontWeight: '500' }}>{totalItemsCount} items</p>
                 </div>
-                <h2 style={{ margin: 0, fontSize: '28px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>Your Shopping Cart</h2>
             </div>
 
             {cartItems.length === 0 ? (
@@ -111,40 +130,116 @@ const ShoppingCart = () => {
                     </button>
                 </div>
             ) : (
-                <div style={{ backgroundColor: '#fff', borderRadius: '20px', boxShadow: '0 8px 24px rgba(0,0,0,0.06)', border: '1px solid #f0f0f0', overflow: 'hidden' }}>
-                    <div style={{ padding: '24px' }}>
+                <>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
                         {cartItems.map((item, index) => (
-                            <div key={item.menuItemId || index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', borderBottom: index < cartItems.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <span style={{ fontSize: '17px', fontWeight: '800', color: '#1a1a1a' }}>{item.name}</span>
-                                    <span style={{ fontSize: '14px', color: '#666', fontWeight: '600' }}>LKR {item.price.toLocaleString()} each</span>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f4f6f8', borderRadius: '10px', padding: '4px' }}>
-                                        <button onClick={() => decreaseQuantity(index)} style={{ width: '32px', height: '32px', cursor: 'pointer', backgroundColor: '#fff', color: '#1a1a1a', border: '1px solid #e0e0e0', borderRadius: '8px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
-                                        <span style={{ fontWeight: '800', width: '36px', textAlign: 'center', fontSize: '15px' }}>{item.quantity}</span>
-                                        <button onClick={() => increaseQuantity(index)} style={{ width: '32px', height: '32px', cursor: 'pointer', backgroundColor: '#fff', color: '#1a1a1a', border: '1px solid #e0e0e0', borderRadius: '8px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                            <div key={item.menuItemId || index} style={{
+                                backgroundColor: '#fff',
+                                borderRadius: '20px',
+                                padding: '20px',
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.04)',
+                                border: '1px solid #f0f0f0',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: '20px'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: '1 1 300px' }}>
+                                    <div style={{
+                                        width: '80px', height: '80px', backgroundColor: '#f8f9fa',
+                                        borderRadius: '16px', overflow: 'hidden', display: 'flex',
+                                        justifyContent: 'center', alignItems: 'center', flexShrink: 0
+                                    }}>
+                                        {item.imageUrl ? (
+                                            <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <span style={{ fontSize: '12px', color: '#ccc', fontWeight: 'bold' }}>NO IMG</span>
+                                        )}
                                     </div>
-                                    <span style={{ fontSize: '17px', fontWeight: '900', color: '#8e2420', minWidth: '110px', textAlign: 'right' }}>LKR {(item.price * item.quantity).toLocaleString()}</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <span style={{ fontSize: '18px', fontWeight: '900', color: '#1a1a1a' }}>{item.name}</span>
+                                        <span style={{ fontSize: '13px', color: '#888', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '1px' }}>{item.category || 'MENU ITEM'}</span>
+                                        <span style={{ fontSize: '16px', fontWeight: '900', color: '#F59E0B', marginTop: '4px' }}>LKR {item.price.toLocaleString()}</span>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                        <button onClick={() => decreaseQuantity(index)} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e0e0e0', backgroundColor: '#fff', color: '#8e2420', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>-</button>
+                                        <span style={{ fontWeight: '900', fontSize: '16px', minWidth: '20px', textAlign: 'center', color: '#1a1a1a' }}>{item.quantity}</span>
+                                        <button onClick={() => increaseQuantity(index)} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e0e0e0', backgroundColor: '#fff', color: '#8e2420', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>+</button>
+                                    </div>
+                                    <button
+                                        onClick={() => deleteItem(index)}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.2s' }}
+                                        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                                        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                    >
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                                        </svg>
+                                    </button>
                                 </div>
                             </div>
                         ))}
                     </div>
 
-                    <div style={{ backgroundColor: '#f9fafb', padding: '24px', borderTop: '1px solid #f0f0f0', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ marginBottom: '30px' }}>
+                        <button
+                            onClick={clearCart}
+                            style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', padding: 0 }}
+                        >
+                            Clear cart
+                        </button>
+                    </div>
+
+                    <div style={{ backgroundColor: '#fff', borderRadius: '20px', boxShadow: '0 8px 24px rgba(0,0,0,0.06)', border: '1px solid #f0f0f0', padding: '30px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '18px', fontWeight: '800', color: '#1a1a1a' }}>Total Amount:</span>
-                            <span style={{ fontSize: '24px', fontWeight: '900', color: '#8e2420' }}>LKR {Number(calculateTotal()).toLocaleString()}</span>
+                            <span style={{ fontSize: '20px', fontWeight: '900', color: '#1a1a1a' }}>Total Amount:</span>
+                            <span style={{ fontSize: '26px', fontWeight: '900', color: '#8e2420' }}>LKR {Number(calculateTotal()).toLocaleString()}</span>
                         </div>
                         <button
                             onClick={handlePlaceOrder}
-                            style={{ width: '100%', padding: '16px', fontSize: '16px', backgroundColor: '#8e2420', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', transition: 'background-color 0.2s', boxShadow: '0 4px 14px rgba(142, 36, 32, 0.3)' }}
+                            style={{ width: '100%', padding: '18px', fontSize: '18px', backgroundColor: '#8e2420', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '900', transition: 'background-color 0.2s', boxShadow: '0 4px 14px rgba(142, 36, 32, 0.3)' }}
                             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#a8322d'}
                             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#8e2420'}
                         >
                             Place Order Now
                         </button>
                     </div>
+                </>
+            )}
+
+            {/* UPGRADED: Premium Transparent "Quite Big" Toast Message */}
+            {toastMessage && (
+                <div style={{
+                    position: 'fixed',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    backgroundColor: 'rgba(20, 20, 20, 0.85)',
+                    backdropFilter: 'blur(16px)',
+                    WebkitBackdropFilter: 'blur(16px)',
+                    color: '#ffffff',
+                    padding: '24px 48px',
+                    borderRadius: '50px',
+                    boxShadow: '0 30px 60px rgba(0,0,0,0.4)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    zIndex: 9999,
+                    fontWeight: '700',
+                    fontSize: '22px',
+                    letterSpacing: '0.5px',
+                    textAlign: 'center',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    animation: 'fadeIn 0.3s ease-out'
+                }}>
+                    <span style={{ color: '#ef4444', fontSize: '26px' }}>✓</span> {toastMessage}
                 </div>
             )}
         </div>
