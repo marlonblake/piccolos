@@ -44,9 +44,11 @@ const ShoppingCart = () => {
         const orderPayload = {
             guestName: "Walk-in Guest",
             orderType: "PICKUP",
+            total: Number(calculateTotal()), // <-- Added to fix NULL in total_amount
             items: cartItems.map(item => ({
                 menuItemId: item.menuItemId,
-                quantity: item.quantity
+                quantity: item.quantity,
+                price: item.price // <-- Added to fix NULL in order_items price
             }))
         };
 
