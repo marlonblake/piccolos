@@ -2,13 +2,16 @@ package com.example.piccolos.service;
 
 import com.example.piccolos.entity.MenuItem;
 import com.example.piccolos.entity.Order;
+import com.example.piccolos.entity.OrderItem;
 import com.example.piccolos.dto.OrderDto;
 import com.example.piccolos.repository.StaffOrderItemRepository;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class OrderDtoMapper {
@@ -41,7 +44,46 @@ public class OrderDtoMapper {
                 order.getOrderType(), order.getStatus(), items, total);
     }
 
-    /** Works whether the price field is Float, Double or BigDecimal. */
+    public Order toEntity(OrderDto dto) {
+        Order order = new Order();
+        order.setGuestName(dto.guestName());
+        order.setTableId(dto.tableId());
+
+        order.setOrderType("Dine-In");
+        order.setStatus("PENDING");
+        order.setCreatedAt(LocalDateTime.now());
+
+        if (dto.total() != null) {
+            order.setTotalAmount(dto.total().doubleValue());
+            order.setSubtotal(dto.total().doubleValue());
+        }
+
+        if (dto.items() != null) {
+            List<OrderItem> orderItems = dto.items().stream().map(itemDto -> {
+                OrderItem item = new OrderItem();
+
+                item.setQuantity(itemDto.quantity());
+
+                if (itemDto.menuItemId() != null) {
+                    MenuItem menuItem = new MenuItem();
+                    menuItem.setId(itemDto.menuItemId());
+                    item.setMenuItem(menuItem);
+                }
+
+                if (itemDto.price() != null) {
+                    item.setPrice(itemDto.price().doubleValue());
+                }
+
+                item.setOrder(order);
+                return item;
+            }).collect(Collectors.toList());
+
+            order.setOrderItems(orderItems);
+        }
+
+        return order;
+    }
+
     public static BigDecimal money(Object value) {
         if (value == null) return BigDecimal.ZERO;
         return new BigDecimal(value.toString()).setScale(2, RoundingMode.HALF_UP);
