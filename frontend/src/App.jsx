@@ -1,3 +1,4 @@
+import StaffDashboard from './pages/staff/StaffDashboard';
 import AdminMenu from './pages/admin/AdminMenu';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
@@ -27,6 +28,7 @@ export default function App() {
                         <Route path="/admin/menu" element={<AdminMenu />} />
                         <Route path="/menu" element={<CustomerMenu />} />
                         <Route path="/cart" element={<ShoppingCart />} />
+                        <Route path="/staff" element={<StaffDashboard />} />
                     </Routes>
                 </main>
 
