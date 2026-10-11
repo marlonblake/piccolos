@@ -1,0 +1,42 @@
+.am-layout { display: flex; min-height: calc(100vh - 80px); background: #f4f5f7; font-family: "Segoe UI", sans-serif; color: #222; padding-top: 80px; }
+
+/* Sidebar */
+.am-sidebar { width: 64px; background: #fff; display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 14px; box-shadow: 1px 0 6px rgba(0,0,0,.06); }
+.am-side-btn { width: 40px; height: 40px; border: none; border-radius: 10px; background: transparent; font-size: 18px; cursor: pointer; }
+.am-side-btn.active { background: #fde6ec; }
+.am-side-spacer { flex: 1; }
+
+/* Main area */
+.am-main { flex: 1; padding: 20px 28px; }
+.am-topbar { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.am-search { flex: 1; padding: 12px 18px; border: none; border-radius: 24px; background: #fff; font-size: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.am-add-btn { background: #d81b4a; color: #fff; border: none; padding: 12px 20px; border-radius: 24px; font-weight: 600; cursor: pointer; }
+
+/* Category pills */
+.am-pills { display: flex; gap: 12px; overflow-x: auto; margin-bottom: 22px; padding-bottom: 4px; }
+.am-pill { display: flex; flex-direction: column; align-items: flex-start; min-width: 130px; padding: 12px 16px; border: 2px solid transparent; border-radius: 14px; background: #fff; cursor: pointer; text-align: left; }
+.am-pill strong { font-size: 14px; }
+.am-pill span { font-size: 11px; color: #888; }
+.am-pill.active { border-color: #d81b4a; background: #fff5f8; }
+
+/* Card grid */
+.am-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+.am-card { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.06); display: flex; flex-direction: column; }
+.am-card img, .am-img-placeholder { width: 100%; height: 150px; object-fit: cover; background: #e9e9ee; display: flex; align-items: center; justify-content: center; font-size: 40px; }
+.am-card-body { padding: 14px 16px 16px; display: flex; flex-direction: column; flex: 1; }
+.am-card-body h3 { margin: 0 0 6px; font-size: 16px; }
+.am-card-body p { margin: 0 0 12px; font-size: 12px; color: #777; flex: 1; }
+.am-card-footer { display: flex; align-items: center; justify-content: space-between; }
+.am-price { color: #d81b4a; font-weight: 700; font-size: 18px; }
+.am-actions { display: flex; gap: 6px; }
+.am-btn { border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; color: #fff; background: #d81b4a; }
+.am-btn.secondary { background: #444; }
+.am-empty { color: #888; margin-top: 30px; }
+
+/* Popup form */
+.am-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 10; }
+.am-modal { background: #fff; border-radius: 16px; padding: 24px; width: 100%; max-width: 420px; }
+.am-modal h2 { margin-top: 0; }
+.am-modal label { display: block; font-size: 13px; margin: 12px 0 4px; }
+.am-modal input, .am-modal select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+.am-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
