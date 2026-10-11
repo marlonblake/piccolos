@@ -7,7 +7,6 @@ const CustomerMenu = () => {
     const [selectedCategory, setSelectedCategory] = useState("All");
     const [statusMessage, setStatusMessage] = useState("Loading menu items...");
 
-    // States for the modal
     const [selectedItem, setSelectedItem] = useState(null);
     const [isAdded, setIsAdded] = useState(false);
 
@@ -18,7 +17,7 @@ const CustomerMenu = () => {
                 if (categoryResponse.ok) {
                     const categoryData = await categoryResponse.json();
                     if (Array.isArray(categoryData)) {
-                        const categoryNames = categoryData.map(cat => cat.name);
+                        const categoryNames = categoryData.map(cat => cat.name).sort((a, b) => a.localeCompare(b));
                         setCategories(["All", ...categoryNames]);
                     }
                 }
@@ -72,7 +71,6 @@ const CustomerMenu = () => {
         const itemId = item.id || item.menuItemId;
         const itemIndex = existingCart.findIndex(cartItem => (cartItem.id || cartItem.menuItemId) === itemId);
 
-        // Safely grab the image whether the backend sends it as imageUrl or image_url
         const itemImage = item.imageUrl || item.image_url;
         const itemCategory = item.category?.name || "MENU ITEM";
 
@@ -97,23 +95,23 @@ const CustomerMenu = () => {
     return (
         <div style={{ padding: '120px 20px 40px', maxWidth: '1200px', margin: 'auto', fontFamily: 'sans-serif', minHeight: '70vh' }}>
 
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '30px' }}>
-                <h2 style={{ margin: 0, fontSize: '28px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>Our Menu</h2>
+            <div style={{ marginBottom: '30px' }}>
+                <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', color: '#1a1a1a' }}>OUR MENU</h2>
             </div>
 
-            <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '30px', flexWrap: 'wrap' }}>
                 {categories.map(cat => (
                     <button
                         key={cat}
                         onClick={() => setSelectedCategory(cat)}
                         style={{
-                            padding: '10px 24px',
+                            padding: '8px 20px',
                             borderRadius: '30px',
                             border: 'none',
-                            backgroundColor: selectedCategory === cat ? '#FFF4E5' : '#f4f6f8',
-                            color: selectedCategory === cat ? '#D97706' : '#666',
-                            fontWeight: 'bold',
-                            fontSize: '14px',
+                            backgroundColor: selectedCategory === cat ? '#FFF4E5' : '#f8f9fa',
+                            color: selectedCategory === cat ? '#D97706' : '#4b5563',
+                            fontWeight: '800',
+                            fontSize: '13px',
                             cursor: 'pointer',
                             transition: 'all 0.2s',
                             textTransform: 'uppercase',
@@ -125,14 +123,70 @@ const CustomerMenu = () => {
                 ))}
             </div>
 
-            <div style={{ marginBottom: '40px' }}>
+            <div style={{ marginBottom: '40px', position: 'relative', maxWidth: '450px' }}>
+                <svg
+                    style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: '#888', pointerEvents: 'none' }}
+                    width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                >
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+
                 <input
                     type="text"
                     placeholder="Search menu items..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    style={{ width: '100%', maxWidth: '400px', padding: '12px 20px', borderRadius: '30px', border: '1px solid #e0e0e0', backgroundColor: '#f9fafb', outline: 'none', fontSize: '15px' }}
+                    style={{
+                        width: '100%',
+                        padding: '16px 48px 16px 48px',
+                        borderRadius: '30px',
+                        border: '1px solid #e0e0e0',
+                        backgroundColor: '#fff',
+                        outline: 'none',
+                        fontSize: '16px',
+                        boxShadow: '0 4px 15px rgba(0,0,0,0.04)',
+                        transition: 'all 0.3s ease',
+                        color: '#1a1a1a'
+                    }}
+                    onFocus={(e) => {
+                        e.target.style.borderColor = '#8e2420';
+                        e.target.style.boxShadow = '0 4px 20px rgba(142, 36, 32, 0.12)';
+                    }}
+                    onBlur={(e) => {
+                        e.target.style.borderColor = '#e0e0e0';
+                        e.target.style.boxShadow = '0 4px 15px rgba(0,0,0,0.04)';
+                    }}
                 />
+
+                {searchTerm && (
+                    <button
+                        onClick={() => setSearchTerm("")}
+                        style={{
+                            position: 'absolute',
+                            right: '16px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: '#f4f6f8',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#666',
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            transition: 'background-color 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e2e8f0'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f4f6f8'}
+                    >
+                        ✕
+                    </button>
+                )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '30px' }}>
@@ -163,20 +217,36 @@ const CustomerMenu = () => {
                             justifyContent: 'center',
                             overflow: 'hidden'
                         }}>
+                            <div style={{
+                                position: 'absolute',
+                                top: '16px',
+                                right: '16px',
+                                backgroundColor: '#F59E0B',
+                                color: '#000',
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                fontWeight: '900',
+                                fontSize: '16px',
+                                boxShadow: '0 4px 10px rgba(245, 158, 11, 0.3)',
+                                zIndex: 2
+                            }}>
+                                LKR {item.price.toLocaleString()}
+                            </div>
+
                             {item.imageUrl || item.image_url ? (
                                 <img
                                     src={item.imageUrl || item.image_url}
                                     alt={item.name}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }}
                                 />
                             ) : (
-                                <span style={{ color: '#ccc', fontSize: '14px', fontWeight: 'bold' }}>NO IMAGE</span>
+                                <span style={{ color: '#b0b0b0', fontSize: '14px', fontWeight: 'bold', zIndex: 1 }}>IMAGE PLACEHOLDER</span>
                             )}
                         </div>
 
                         <div style={{ padding: '24px', textAlign: 'center', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                            <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', fontWeight: '800', color: '#1a1a1a' }}>{item.name}</h3>
-                            <div style={{ color: '#F59E0B', fontWeight: '900', fontSize: '16px' }}>LKR {item.price.toLocaleString()}</div>
+                            <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '900', color: '#1a1a1a' }}>{item.name}</h3>
+                            <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>{item.description || "A delicious selection prepared fresh daily."}</p>
                         </div>
                     </div>
                 ))}
@@ -184,7 +254,6 @@ const CustomerMenu = () => {
 
             {filteredMenu.length === 0 && <p style={{ textAlign: 'center', marginTop: '40px', color: '#dc3545', fontWeight: 'bold' }}>{statusMessage}</p>}
 
-            {/* MODAL OVERLAY WITH ORIGINAL BRANDING */}
             {selectedItem && (
                 <div style={{
                     position: 'fixed',
@@ -209,7 +278,6 @@ const CustomerMenu = () => {
                         position: 'relative',
                         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
                     }}>
-                        {/* Close Icon */}
                         <button
                             onClick={() => setSelectedItem(null)}
                             style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#999', fontWeight: 'bold' }}
@@ -217,7 +285,6 @@ const CustomerMenu = () => {
                             ✕
                         </button>
 
-                        {/* Left: Image Container */}
                         <div style={{
                             flex: '1',
                             border: '1px solid #eaeaea',
@@ -233,14 +300,12 @@ const CustomerMenu = () => {
                             {selectedItem.imageUrl || selectedItem.image_url ? (
                                 <img src={selectedItem.imageUrl || selectedItem.image_url} alt={selectedItem.name} style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px'}} />
                             ) : (
-                                <span style={{ color: '#ccc', fontWeight: 'bold' }}>NO IMAGE</span>
+                                <span style={{ color: '#b0b0b0', fontWeight: 'bold' }}>IMAGE PLACEHOLDER</span>
                             )}
                         </div>
 
-                        {/* Right: Details Container */}
                         <div style={{ flex: '1', padding: window.innerWidth < 768 ? '20px 0 0 0' : '0 0 0 40px', display: 'flex', flexDirection: 'column' }}>
 
-                            {/* Category Badge */}
                             <div style={{
                                 display: 'inline-block',
                                 backgroundColor: '#f4f6f8',
@@ -259,7 +324,6 @@ const CustomerMenu = () => {
 
                             <h2 style={{ margin: '0 0 12px 0', fontSize: '32px', fontWeight: '900', color: '#1a1a1a' }}>{selectedItem.name}</h2>
 
-                            {/* Original Yellow Price Badge */}
                             <div style={{
                                 backgroundColor: '#F59E0B',
                                 color: '#000',
@@ -282,7 +346,6 @@ const CustomerMenu = () => {
                                 {selectedItem.description || "A delicious selection prepared fresh daily."}
                             </p>
 
-                            {/* Buttons with Original Red */}
                             <div style={{ display: 'flex', gap: '16px', marginTop: '32px' }}>
                                 <button
                                     onClick={() => setSelectedItem(null)}
