@@ -17,7 +17,7 @@ export default function Home() {
     {
       id: 3,
       name: "Ishani Wijesinghe",
-      text: "Tried this place and was pleasantly surprised! They serve a wide range of Italian dishes at very affordable prices. (There are Chinese dishes too) Though we were skeptical at first, everything tasted great, and they even offered a free regular pizza. Calm atmosphere and friendly staff! definitely a must-try pizza spot!"
+      text: "Tried  this place and was pleasantly surprised! They serve a wide range of Italian dishes at very affordable prices. (There are Chinese dishes too) Though we were skeptical at first, everything tasted great, and they even offered a free regular pizza. Calm atmosphere and friendly staff! definitely a must-try pizza spot!"
     }
   ];
 
