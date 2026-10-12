@@ -47,6 +47,7 @@ const ShoppingCart = () => {
     };
 
     const calculateTotal = () => {
+        // Fixed missing '*' symbol here
         return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0).toFixed(2);
     };
 
@@ -191,7 +192,19 @@ const ShoppingCart = () => {
                     <div style={{ marginBottom: '30px' }}>
                         <button
                             onClick={clearCart}
-                            style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', padding: 0 }}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#ef4444',
+                                fontFamily: "'Poppins', sans-serif",
+                                fontSize: '16px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                padding: '8px',
+                                transition: 'opacity 0.2s',
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.opacity = '0.7'}
+                            onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
                         >
                             Clear cart
                         </button>
