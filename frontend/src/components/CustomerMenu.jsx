@@ -98,7 +98,7 @@ const CustomerMenu = () => {
     };
 
     return (
-        <div style={{ padding: '120px 20px 40px', maxWidth: '1200px', margin: 'auto', fontFamily: 'sans-serif', minHeight: '70vh' }}>
+        <div style={{ padding: '120px 20px 40px', maxWidth: '1200px', margin: 'auto', fontFamily: "'Poppins', sans-serif", minHeight: '70vh' }}>
 
             <div style={{ marginBottom: '30px' }}>
                 <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', color: '#1a1a1a' }}>OUR MENU</h2>
@@ -115,6 +115,7 @@ const CustomerMenu = () => {
                             border: 'none',
                             backgroundColor: selectedCategory === cat ? '#FFF4E5' : '#f8f9fa',
                             color: selectedCategory === cat ? '#D97706' : '#4b5563',
+                            fontFamily: "'Poppins', sans-serif",
                             fontWeight: '800',
                             fontSize: '13px',
                             cursor: 'pointer',
