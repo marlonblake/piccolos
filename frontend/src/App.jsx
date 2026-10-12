@@ -1,5 +1,6 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 
 // Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -34,9 +35,37 @@ const CustomerLayout = () => {
 
 // 2. Create an Admin Layout that excludes the customer Navbar/Footer
 const AdminLayout = () => {
+    const navigate = useNavigate();
+
+    const handleAdminLogout = () => {
+        const confirmLogout = window.confirm("Are you sure you want to log out of the admin portal?");
+        if (confirmLogout) {
+            localStorage.removeItem('adminToken');
+            navigate('/admin');
+        }
+    };
+
     return (
-        <div className="flex min-h-screen bg-gray-100">
-            {/* You can drop an <AdminSidebar /> here later if you build one */}
+        <div className="flex flex-col min-h-screen bg-gray-100">
+            {/* Global Admin Header */}
+            <header className="bg-white shadow-sm px-8 py-4 flex justify-between items-center border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-[#2C3E2D] rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold font-serif text-sm">P</span>
+                    </div>
+                    <span className="font-bold text-[#2C3E2D] tracking-widest uppercase text-sm">
+                        Admin Portal
+                    </span>
+                </div>
+                
+                <button 
+                    onClick={handleAdminLogout} 
+                    className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-red-600 transition-colors"
+                >
+                    <LogOut className="w-4 h-4" /> Log Out
+                </button>
+            </header>
+
             <main className="flex-grow p-8">
                 <Outlet /> {/* Admin pages will inject here */}
             </main>
