@@ -116,10 +116,25 @@ public class TicketService {
         Order order = orderRepo.findOpenDineIn(tableId).stream().findFirst()
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "No open ticket for table " + tableId));
+        return toInvoiceDto(createInvoice(order));
+    }
 
+    /** Invoice for a single order (used for pickup orders). Returns the existing invoice if there is one. */
+    @Transactional
+    public InvoiceDto generateOrderInvoice(Long orderId) {
+        Order order = findOrder(orderId);
+        if ("CANCELLED".equalsIgnoreCase(order.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cancelled orders cannot be invoiced");
+        }
+        return invoiceRepo.findByOrderId(orderId)
+                .map(this::toInvoiceDto)
+                .orElseGet(() -> toInvoiceDto(createInvoice(order)));
+    }
+
+    private Invoice createInvoice(Order order) {
         BigDecimal subtotal = mapper.toDto(order).total();
         if (subtotal.signum() <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ticket has no items");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order has no items");
         }
         BigDecimal tax = subtotal.multiply(taxRate).setScale(2, RoundingMode.HALF_UP);
 
@@ -127,7 +142,7 @@ public class TicketService {
         invoice.setOrder(order);
         invoice.setTaxAmount(tax.floatValue());
         invoice.setTotalAmount(subtotal.add(tax).floatValue());
-        return toInvoiceDto(invoiceRepo.save(invoice));
+        return invoiceRepo.save(invoice);
     }
 
     @Transactional(readOnly = true)
