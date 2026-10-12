@@ -55,7 +55,7 @@ public class StaffTicketController {
     }
 
     @PatchMapping("/invoices/{id}/pay")
-    public InvoiceDto pay(@PathVariable Long id) {
-        return tickets.markPaid(id);
+    public InvoiceDto pay(@PathVariable Long id, @RequestParam(defaultValue = "CASH") String method) {
+        return tickets.markPaid(id, method);
     }
 }
