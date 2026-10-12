@@ -9,6 +9,8 @@ const CustomerMenu = () => {
 
     const [selectedItem, setSelectedItem] = useState(null);
     const [isAdded, setIsAdded] = useState(false);
+    // NEW: Quantity state added here
+    const [quantity, setQuantity] = useState(1);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -64,6 +66,8 @@ const CustomerMenu = () => {
     const openModal = (item) => {
         setSelectedItem(item);
         setIsAdded(false);
+        // NEW: Reset quantity to 1 every time a new item is opened
+        setQuantity(1);
     };
 
     const handleAddToCart = (item) => {
@@ -75,13 +79,14 @@ const CustomerMenu = () => {
         const itemCategory = item.category?.name || "MENU ITEM";
 
         if (itemIndex >= 0) {
-            existingCart[itemIndex].quantity += 1;
+            // NEW: Add the selected quantity instead of just +1
+            existingCart[itemIndex].quantity += quantity;
         } else {
             existingCart.push({
                 menuItemId: itemId,
                 name: item.name,
                 price: item.price,
-                quantity: 1,
+                quantity: quantity, // NEW: Use selected quantity
                 imageUrl: itemImage,
                 category: itemCategory
             });
@@ -336,7 +341,7 @@ const CustomerMenu = () => {
                                 marginBottom: '24px',
                                 boxShadow: '0 4px 10px rgba(245, 158, 11, 0.3)'
                             }}>
-                                LKR {selectedItem.price.toLocaleString()}
+                                LKR {(selectedItem.price * quantity).toLocaleString()}
                             </div>
 
                             <hr style={{ borderTop: '1px solid #f0f0f0', width: '100%', margin: '0 0 24px 0' }} />
@@ -346,37 +351,62 @@ const CustomerMenu = () => {
                                 {selectedItem.description || "A delicious selection prepared fresh daily."}
                             </p>
 
-                            <div style={{ display: 'flex', gap: '16px', marginTop: '32px' }}>
-                                <button
-                                    onClick={() => setSelectedItem(null)}
-                                    style={{ flex: 1, padding: '14px', backgroundColor: '#fff', border: '2px solid #e0e0e0', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', color: '#1a1a1a', fontSize: '15px' }}
-                                >
-                                    Cancel
-                                </button>
-
-                                <button
-                                    onClick={() => handleAddToCart(selectedItem)}
-                                    onMouseOver={(e) => !isAdded && (e.currentTarget.style.backgroundColor = '#a8322d')}
-                                    onMouseOut={(e) => !isAdded && (e.currentTarget.style.backgroundColor = '#8e2420')}
-                                    style={{
-                                        flex: 1,
-                                        padding: '14px',
-                                        backgroundColor: isAdded ? '#2C3E2D' : '#8e2420',
-                                        border: 'none',
-                                        borderRadius: '12px',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer',
-                                        color: '#fff',
-                                        fontSize: '15px',
-                                        transition: 'background-color 0.2s',
+                            <div style={{ marginTop: 'auto' }}>
+                                {/* NEW: Quantity Pill UI */}
+                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
+                                    <span style={{ fontSize: '13px', color: '#1a1a1a', fontWeight: '800', textTransform: 'uppercase', marginRight: '16px' }}>Quantity</span>
+                                    <div style={{
                                         display: 'flex',
-                                        justifyContent: 'center',
                                         alignItems: 'center',
-                                        gap: '8px'
-                                    }}
-                                >
-                                    {isAdded ? '✓ Added' : 'Add to Cart'}
-                                </button>
+                                        border: '1px solid #e0e0e0',
+                                        borderRadius: '24px',
+                                        padding: '4px 12px',
+                                        width: 'fit-content'
+                                    }}>
+                                        <button
+                                            onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                                            style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '0 12px', color: '#334155', fontWeight: 'bold' }}
+                                        >−</button>
+                                        <span style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 12px', minWidth: '20px', textAlign: 'center', color: '#1e293b' }}>{quantity}</span>
+                                        <button
+                                            onClick={() => setQuantity(q => q + 1)}
+                                            style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '0 12px', color: '#334155', fontWeight: 'bold' }}
+                                        >+</button>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '16px' }}>
+                                    <button
+                                        onClick={() => setSelectedItem(null)}
+                                        style={{ flex: 1, padding: '14px', backgroundColor: '#fff', border: '2px solid #e0e0e0', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', color: '#1a1a1a', fontSize: '15px' }}
+                                    >
+                                        Cancel
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleAddToCart(selectedItem)}
+                                        onMouseOver={(e) => !isAdded && (e.currentTarget.style.backgroundColor = '#a8322d')}
+                                        onMouseOut={(e) => !isAdded && (e.currentTarget.style.backgroundColor = '#8e2420')}
+                                        style={{
+                                            flex: 1,
+                                            padding: '14px',
+                                            backgroundColor: isAdded ? '#2C3E2D' : '#8e2420',
+                                            border: 'none',
+                                            borderRadius: '12px',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            color: '#fff',
+                                            fontSize: '15px',
+                                            transition: 'background-color 0.2s',
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            gap: '8px'
+                                        }}
+                                    >
+                                        {isAdded ? '✓ Added' : 'Add to Cart'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

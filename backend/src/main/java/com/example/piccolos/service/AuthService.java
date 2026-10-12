@@ -101,7 +101,8 @@ public class AuthService {
         newAdmin.setPasswordHash(hashedPassword);
 
         adminRepository.save(newAdmin);
-        return "Admin registered successfully
+        return "Admin registered successfully";
+    }
 
     // READ (Profile Data)
     public User getUserProfile(Integer id) {

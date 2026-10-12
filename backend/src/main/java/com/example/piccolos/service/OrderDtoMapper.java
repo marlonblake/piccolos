@@ -49,7 +49,7 @@ public class OrderDtoMapper {
         order.setGuestName(dto.guestName());
         order.setTableId(dto.tableId());
 
-        order.setOrderType("Dine-In");
+        order.setOrderType(dto.orderType());
         order.setStatus("PENDING");
         order.setCreatedAt(LocalDateTime.now());
 
