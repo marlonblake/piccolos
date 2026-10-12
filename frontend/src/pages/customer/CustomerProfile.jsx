@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Phone, Mail, AlertTriangle } from 'lucide-react';
+import { User, Phone, Mail, AlertTriangle, LogOut } from 'lucide-react';
 
 export default function CustomerProfile() {
   const [formData, setFormData] = useState({
@@ -69,7 +69,7 @@ export default function CustomerProfile() {
           fname: formData.fname,
           lname: formData.lname,
           phoneNumber: formData.phoneNumber
-        }) // Explicitly excluding email if you don't allow changing it
+        }) 
       });
 
       if (response.ok) {
@@ -81,6 +81,13 @@ export default function CustomerProfile() {
     } catch (error) {
       setMessage({ text: 'Network error during update.', type: 'error' });
     }
+  };
+
+  // Logout Logic
+  const handleLogout = () => {
+    localStorage.removeItem('customerToken');
+    localStorage.removeItem('userId');
+    navigate('/'); 
   };
 
   const handleDelete = async () => {
@@ -223,6 +230,16 @@ export default function CustomerProfile() {
               {message.text}
             </div>
           )}
+
+          {/* Standard Logout Button */}
+          <button 
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 py-3 mt-6 bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 rounded-xl font-semibold transition-colors shadow-sm"
+          >
+            <LogOut className="w-5 h-5" />
+            Log Out
+          </button>
 
           <div className="flex items-center my-8">
             <div className="flex-1 border-t border-gray-300"></div>
