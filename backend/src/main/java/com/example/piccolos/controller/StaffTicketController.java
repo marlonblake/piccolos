@@ -34,6 +34,11 @@ public class StaffTicketController {
         return tickets.addItem(orderId, req);
     }
 
+    @PostMapping("/orders/{orderId}/invoice")
+    public InvoiceDto generateOrderInvoice(@PathVariable Long orderId) {
+        return tickets.generateOrderInvoice(orderId);
+    }
+
     @DeleteMapping("/tickets/{orderId}/items/{itemId}")
     public OrderDto removeItem(@PathVariable Long orderId, @PathVariable Long itemId) {
         return tickets.removeItem(orderId, itemId);
