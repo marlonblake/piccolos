@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ShoppingBag, User } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, ShoppingBag, User, LogOut } from 'lucide-react';
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-
-  // NEW: State to track if the user is logged in
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
 
   const location = useLocation();
-  const [cartCount, setCartCount] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const updateCartCount = () => {
@@ -18,7 +17,7 @@ export default function Navbar() {
       const totalItems = cart.reduce((total, item) => total + (item.quantity || 1), 0);
       setCartCount(totalItems);
     };
-    updateCartCount(); // Run once on load
+    updateCartCount();
     window.addEventListener('cartUpdated', updateCartCount);
     return () => window.removeEventListener('cartUpdated', updateCartCount);
   }, []);
@@ -30,34 +29,33 @@ export default function Navbar() {
 
     window.addEventListener('scroll', handleScroll);
 
-    // NEW: Check for token on component mount and whenever location changes
     const token = localStorage.getItem('customerToken');
     setIsLoggedIn(!!token);
 
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [location]); // Re-run token check when route changes
+  }, [location]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('customerToken');
+    localStorage.removeItem('userId');
+    setIsLoggedIn(false);
+    navigate('/'); 
+  };
 
   const isActive = (path) => location.pathname === path;
-
-  // Check if we are on the home page.
   const isHome = location.pathname === '/';
-
-  // The navbar should be solid if we are NOT on the home page, OR if we have scrolled down.
   const isSolidMode = !isHome || isScrolled;
 
-  // Apply backgrounds based on the new isSolidMode rule
   const navBackground = isSolidMode
       ? 'bg-gradient-to-r from-[#8e2420] to-[#d45532] shadow-lg'
       : 'bg-gradient-to-b from-black/80 to-transparent';
 
   const textColors = 'text-[#FDFBF7]';
   const hoverText = 'hover:text-gray-300';
-
   const linkBaseClass = `uppercase tracking-[0.15em] text-sm font-semibold pb-1 border-b-2 transition-all ${textColors}`;
   const activeClass = "border-[#FDFBF7]";
   const inactiveClass = `border-transparent ${hoverText}`;
 
-  // NEW: Determine where the user icon should point
   const userIconPath = isLoggedIn ? "/profile" : "/login";
   const userIconTitle = isLoggedIn ? "My Profile" : "Log In / Register";
 
@@ -91,8 +89,6 @@ export default function Navbar() {
 
             {/* Right Navigation Links & Icons */}
             <div className="flex-1 flex justify-between items-center pl-12">
-
-              {/* Right Text Links */}
               <div className="flex space-x-10">
                 <a href="/#about" className={`${linkBaseClass} ${inactiveClass}`}>
                   About
@@ -106,7 +102,6 @@ export default function Navbar() {
               <div className="flex items-center space-x-4">
                 <div className="w-px h-8 bg-[#FDFBF7]/30 mr-2"></div>
 
-                {/* UPDATED: Dynamic Link based on auth state */}
                 <Link
                     to={userIconPath}
                     className={`w-11 h-11 rounded-full border border-[#FDFBF7]/30 flex items-center justify-center ${textColors} hover:border-[#FDFBF7] transition-colors`}
@@ -127,8 +122,17 @@ export default function Navbar() {
                   </span>
                   )}
                 </Link>
-              </div>
 
+                {isLoggedIn && (
+                  <button 
+                    onClick={handleLogout} 
+                    className="w-11 h-11 rounded-full border border-red-400/50 flex items-center justify-center text-red-400 hover:text-red-300 hover:border-red-300 transition-colors ml-2" 
+                    title="Log Out"
+                  >
+                    <LogOut size={20} strokeWidth={1.5} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -145,11 +149,10 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* UPDATED: Dynamic Link for mobile as well */}
               <Link to={userIconPath} className={`${textColors}`} title={userIconTitle}>
                 <User size={24} />
               </Link>
-              {/* ADDED: relative positioning class to anchor the absolute badge */}
+              
               <Link to="/cart" className={`${textColors} relative`}>
                 <ShoppingBag size={24} />
                 {cartCount > 0 && (
@@ -158,6 +161,13 @@ export default function Navbar() {
                 </span>
                 )}
               </Link>
+
+              {isLoggedIn && (
+                <button onClick={handleLogout} className="text-red-400 hover:text-red-300 transition-colors" title="Log Out">
+                  <LogOut size={24} />
+                </button>
+              )}
+
               <button
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                   className={`${textColors} ml-2`}
