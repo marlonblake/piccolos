@@ -79,10 +79,10 @@ function AdminDashboard() {
         {
             title: "Order Queue & POS",
             description: "View and manage incoming orders in real-time.",
-            icon: <ShoppingBag className="w-8 h-8 text-gray-400" />,
-            path: "/admin/orders",
-            ready: false,
-            status: "COMING SOON"
+            icon: <ShoppingBag className="w-8 h-8 text-[#2C3E2D]" />,
+            path: "/admin/pos",
+            ready: true,
+            status: "ACTIVE"
         },
         {
             title: "Table Reservations",
