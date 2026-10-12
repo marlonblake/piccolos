@@ -55,7 +55,7 @@ const api = {
     removeItem: (orderId, itemId) => request(`/admin/tickets/${orderId}/items/${itemId}`, { method: "DELETE" }),
     invoice: (tableId) => request(`/admin/tables/${tableId}/invoice`, { method: "POST" }),
     orderInvoice: (orderId) => request(`/admin/orders/${orderId}/invoice`, { method: "POST" }),
-    pay: (invoiceId) => request(`/admin/invoices/${invoiceId}/pay`, { method: "PATCH" }),
+    pay: (invoiceId, method) => request(`/admin/invoices/${invoiceId}/pay?method=${method}`, { method: "PATCH" }),
     menu: () => request("/menu", { auth: false })
 };
 
@@ -325,11 +325,12 @@ function KitchenBoard() {
 function InvoiceModal({ invoice, onClose, onPaid }) {
     const [error, setError] = useState("");
     const [working, setWorking] = useState(false);
+    const [method, setMethod] = useState("CASH");
 
     const pay = async () => {
         setWorking(true);
         try {
-            await api.pay(invoice.id);
+            await api.pay(invoice.id, method);
             onPaid(invoice);
         } catch (e) {
             setError(e.message);
@@ -371,6 +372,22 @@ function InvoiceModal({ invoice, onClose, onPaid }) {
                         </div>
                     </div>
 
+                    {!invoice.paid && (
+                        <div className="mt-6">
+                            <label className="block text-xs font-bold uppercase tracking-widest text-[#2C3E2D] mb-2">
+                                Payment Method
+                            </label>
+                            <div className="flex gap-2">
+                                <button type="button" onClick={() => setMethod("CASH")} className={pillClass(method === "CASH")}>
+                                    Cash
+                                </button>
+                                <button type="button" onClick={() => setMethod("CARD")} className={pillClass(method === "CARD")}>
+                                    Card
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {error && (
                         <p className="mt-4 text-sm text-red-700 bg-red-50 rounded-xl px-4 py-3">{error}</p>
                     )}
@@ -384,10 +401,10 @@ function InvoiceModal({ invoice, onClose, onPaid }) {
                         </button>
                         <button
                             onClick={pay}
-                            disabled={working}
+                            disabled={working || invoice.paid}
                             className="flex-1 bg-[#2C3E2D] hover:bg-[#1A251B] text-white py-3.5 rounded-xl font-semibold transition-all shadow-md disabled:opacity-50"
                         >
-                            Mark as paid
+                            {invoice.paid ? "Already paid" : "Mark as paid"}
                         </button>
                     </div>
 
