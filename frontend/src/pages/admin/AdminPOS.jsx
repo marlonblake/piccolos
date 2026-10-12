@@ -54,7 +54,8 @@ const api = {
         }),
     removeItem: (orderId, itemId) => request(`/admin/tickets/${orderId}/items/${itemId}`, { method: "DELETE" }),
     invoice: (tableId) => request(`/admin/tables/${tableId}/invoice`, { method: "POST" }),
-    pay: (invoiceId) => request(`/admin/invoices/${invoiceId}/pay`, { method: "PATCH" }),
+    orderInvoice: (orderId) => request(`/admin/orders/${orderId}/invoice`, { method: "POST" }),
+    pay: (invoiceId, method) => request(`/admin/invoices/${invoiceId}/pay?method=${method}`, { method: "PATCH" }),
     menu: () => request("/menu", { auth: false })
 };
 
@@ -105,7 +106,7 @@ function ErrorBanner({ message }) {
         <div className="mb-6 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">
             {message}{" "}
             {message.startsWith("Not authorised") && (
-                <Link to="/admin/login" className="font-semibold underline">
+                <Link to="/admin" className="font-semibold underline">
                     Go to login
                 </Link>
             )}
@@ -115,7 +116,7 @@ function ErrorBanner({ message }) {
 
 /* ---------- Kitchen board ---------- */
 
-function OrderCard({ order, fresh, onMove }) {
+function OrderCard({ order, fresh, onMove, onInvoice }) {
     const status = (order.status || "").toUpperCase();
     const dineIn = (order.orderType || "").toUpperCase() === "DINE_IN";
     const next = NEXT[status];
@@ -172,6 +173,14 @@ function OrderCard({ order, fresh, onMove }) {
                         </button>
                     )
                 )}
+                {status === "READY" && !dineIn && (
+                    <button
+                        onClick={() => onInvoice(order)}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-[#D45D3C] border border-[#D45D3C]/40 hover:bg-[#D45D3C]/5 transition-all"
+                    >
+                        <Receipt className="w-4 h-4" /> Invoice
+                    </button>
+                )}
                 {(status === "PENDING" || status === "PREPARING") && (
                     <button
                         onClick={cancel}
@@ -191,6 +200,7 @@ function KitchenBoard() {
     const [error, setError] = useState("");
     const [fresh, setFresh] = useState(new Set());
     const [sound, setSound] = useState(true);
+    const [invoice, setInvoice] = useState(null);
     const seen = useRef(null);
     const soundRef = useRef(sound);
     soundRef.current = sound;
@@ -236,6 +246,20 @@ function KitchenBoard() {
         }
     };
 
+    const openInvoice = async (order) => {
+        try {
+            setInvoice(await api.orderInvoice(order.id));
+            setError("");
+        } catch (e) {
+            setError(e.message);
+        }
+    };
+
+    const paid = () => {
+        setInvoice(null);
+        load();
+    };
+
     return (
         <div>
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-8 flex flex-col sm:flex-row gap-4 justify-between items-center">
@@ -276,7 +300,13 @@ function KitchenBoard() {
                             ) : (
                                 <div className="space-y-4">
                                     {list.map((o) => (
-                                        <OrderCard key={o.id} order={o} fresh={fresh.has(o.id)} onMove={move} />
+                                        <OrderCard
+                                            key={o.id}
+                                            order={o}
+                                            fresh={fresh.has(o.id)}
+                                            onMove={move}
+                                            onInvoice={openInvoice}
+                                        />
                                     ))}
                                 </div>
                             )}
@@ -284,6 +314,8 @@ function KitchenBoard() {
                     );
                 })}
             </div>
+
+            {invoice && <InvoiceModal invoice={invoice} onClose={() => setInvoice(null)} onPaid={paid} />}
         </div>
     );
 }
@@ -293,11 +325,12 @@ function KitchenBoard() {
 function InvoiceModal({ invoice, onClose, onPaid }) {
     const [error, setError] = useState("");
     const [working, setWorking] = useState(false);
+    const [method, setMethod] = useState("CASH");
 
     const pay = async () => {
         setWorking(true);
         try {
-            await api.pay(invoice.id);
+            await api.pay(invoice.id, method);
             onPaid(invoice);
         } catch (e) {
             setError(e.message);
@@ -321,7 +354,9 @@ function InvoiceModal({ invoice, onClose, onPaid }) {
                 </div>
 
                 <div className="p-8">
-                    <p className="text-sm text-[#2C3E2D]/60 mb-4">Table {invoice.tableId}</p>
+                    <p className="text-sm text-[#2C3E2D]/60 mb-4">
+                        {invoice.tableId ? `Table ${invoice.tableId}` : `Pickup order #${invoice.orderId}`}
+                    </p>
                     <div className="space-y-2 text-[#2C3E2D]">
                         <div className="flex justify-between">
                             <span>Subtotal</span>
@@ -337,6 +372,22 @@ function InvoiceModal({ invoice, onClose, onPaid }) {
                         </div>
                     </div>
 
+                    {!invoice.paid && (
+                        <div className="mt-6">
+                            <label className="block text-xs font-bold uppercase tracking-widest text-[#2C3E2D] mb-2">
+                                Payment Method
+                            </label>
+                            <div className="flex gap-2">
+                                <button type="button" onClick={() => setMethod("CASH")} className={pillClass(method === "CASH")}>
+                                    Cash
+                                </button>
+                                <button type="button" onClick={() => setMethod("CARD")} className={pillClass(method === "CARD")}>
+                                    Card
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {error && (
                         <p className="mt-4 text-sm text-red-700 bg-red-50 rounded-xl px-4 py-3">{error}</p>
                     )}
@@ -350,10 +401,10 @@ function InvoiceModal({ invoice, onClose, onPaid }) {
                         </button>
                         <button
                             onClick={pay}
-                            disabled={working}
+                            disabled={working || invoice.paid}
                             className="flex-1 bg-[#2C3E2D] hover:bg-[#1A251B] text-white py-3.5 rounded-xl font-semibold transition-all shadow-md disabled:opacity-50"
                         >
-                            Mark as paid
+                            {invoice.paid ? "Already paid" : "Mark as paid"}
                         </button>
                     </div>
 
@@ -674,7 +725,13 @@ export default function AdminPOS() {
                     </p>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                        to="/menu"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-[#D45D3C] bg-white hover:bg-[#D45D3C]/5 border border-[#D45D3C]/40 transition-all"
+                    >
+                        <Utensils className="w-4 h-4" /> View Menu
+                    </Link>
                     <button onClick={() => setTab("kitchen")} className={pillClass(tab === "kitchen")}>
                         Kitchen Orders
                     </button>
@@ -688,3 +745,4 @@ export default function AdminPOS() {
         </div>
     );
 }
+

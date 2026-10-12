@@ -1,5 +1,7 @@
 package com.example.piccolos.service;
 
+import com.example.piccolos.entity.Payment;
+import com.example.piccolos.repository.PaymentRepository;
 import com.example.piccolos.entity.Invoice;
 import com.example.piccolos.entity.MenuItem;
 import com.example.piccolos.entity.Order;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
@@ -30,6 +33,7 @@ public class TicketService {
     private final StaffInvoiceRepository invoiceRepo;
     private final MenuItemRepository menuItemRepo;
     private final OrderDtoMapper mapper;
+    private final PaymentRepository paymentRepo;
 
     @Value("${app.tax-rate:0.10}")
     private BigDecimal taxRate;
@@ -38,11 +42,13 @@ public class TicketService {
                          StaffOrderItemRepository itemRepo,
                          StaffInvoiceRepository invoiceRepo,
                          MenuItemRepository menuItemRepo,
+                         PaymentRepository paymentRepo,
                          OrderDtoMapper mapper) {
         this.orderRepo = orderRepo;
         this.itemRepo = itemRepo;
         this.invoiceRepo = invoiceRepo;
         this.menuItemRepo = menuItemRepo;
+        this.paymentRepo = paymentRepo;
         this.mapper = mapper;
     }
 
@@ -116,10 +122,25 @@ public class TicketService {
         Order order = orderRepo.findOpenDineIn(tableId).stream().findFirst()
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "No open ticket for table " + tableId));
+        return toInvoiceDto(createInvoice(order));
+    }
 
+    /** Invoice for a single order (used for pickup orders). Returns the existing invoice if there is one. */
+    @Transactional
+    public InvoiceDto generateOrderInvoice(Long orderId) {
+        Order order = findOrder(orderId);
+        if ("CANCELLED".equalsIgnoreCase(order.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cancelled orders cannot be invoiced");
+        }
+        return invoiceRepo.findByOrderId(orderId)
+                .map(this::toInvoiceDto)
+                .orElseGet(() -> toInvoiceDto(createInvoice(order)));
+    }
+
+    private Invoice createInvoice(Order order) {
         BigDecimal subtotal = mapper.toDto(order).total();
         if (subtotal.signum() <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ticket has no items");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order has no items");
         }
         BigDecimal tax = subtotal.multiply(taxRate).setScale(2, RoundingMode.HALF_UP);
 
@@ -127,7 +148,7 @@ public class TicketService {
         invoice.setOrder(order);
         invoice.setTaxAmount(tax.floatValue());
         invoice.setTotalAmount(subtotal.add(tax).floatValue());
-        return toInvoiceDto(invoiceRepo.save(invoice));
+        return invoiceRepo.save(invoice);
     }
 
     @Transactional(readOnly = true)
@@ -136,13 +157,27 @@ public class TicketService {
     }
 
     /** Payment closes the order. */
+    /** Records the payment, then closes the order. */
     @Transactional
-    public InvoiceDto markPaid(Long invoiceId) {
+    public InvoiceDto markPaid(Long invoiceId, String method) {
         Invoice invoice = findInvoice(invoiceId);
         Order order = invoice.getOrder();
-        if ("COMPLETED".equalsIgnoreCase(order.getStatus())) {
+
+        if ("COMPLETED".equalsIgnoreCase(order.getStatus()) || paymentRepo.existsByInvoiceId(invoiceId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invoice already paid");
         }
+
+        String paymentMethod = method == null ? "" : method.trim().toUpperCase();
+        if (!paymentMethod.equals("CASH") && !paymentMethod.equals("CARD")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment method must be CASH or CARD");
+        }
+
+        Payment payment = new Payment();
+        payment.setInvoice(invoice);
+        payment.setAmount(invoice.getTotalAmount());
+        payment.setPaymentMethod(paymentMethod);
+        paymentRepo.save(payment);
+
         order.setStatus("COMPLETED");
         orderRepo.save(order);
         return toInvoiceDto(invoice);
