@@ -13,6 +13,7 @@ import Home from './pages/customer/Home';
 import Booking from './pages/customer/Booking';
 import CustomerProfile from './pages/customer/CustomerProfile';
 import AdminRegister from './pages/admin/AdminRegister';
+import AdminPOS from './pages/admin/AdminPOS';
 
 // Components
 import Navbar from './components/Navbar';
@@ -63,6 +64,7 @@ export default function App() {
                 <Route element={<AdminLayout />}>
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />
                     <Route path="/admin/register" element={<AdminRegister />} />
+                    <Route path="/admin/pos" element={<AdminPOS />} />
                 </Route>
 
                 {/* STANDALONE ROUTES - no layout wrappers */}

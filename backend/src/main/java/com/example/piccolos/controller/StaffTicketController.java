@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/staff")
+@RequestMapping("/api/admin")
 public class StaffTicketController {
 
     private final TicketService tickets;
