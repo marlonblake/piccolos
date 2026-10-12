@@ -6,7 +6,7 @@ import {
     UserCheck, 
     ShoppingBag, 
     Calendar, 
-    BarChart3, 
+    BarChart3,
     LogOut, 
     Menu, 
     ChevronLeft,
@@ -25,7 +25,6 @@ export default function AdminSidebar() {
         }
     };
 
-    // Helper function to style active links
     const navLinkClass = ({ isActive }) => `
         flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-semibold
         ${isActive ? 'bg-white/20 text-white shadow-sm' : 'text-white/80 hover:bg-white/10 hover:text-white'}
@@ -38,7 +37,6 @@ export default function AdminSidebar() {
                 isCollapsed ? 'w-20' : 'w-64'
             }`}
         >
-            {/* Header / Logo Area */}
             <div className="flex items-center justify-between p-6 border-b border-white/10">
                 {!isCollapsed && (
                     <div className="flex items-center gap-2">
@@ -53,10 +51,8 @@ export default function AdminSidebar() {
                 </button>
             </div>
 
-            {/* Navigation Links */}
             <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-8 custom-scrollbar">
                 
-                {/* GENERAL SECTION */}
                 <div>
                     {!isCollapsed && <p className="px-4 text-[10px] font-bold uppercase tracking-widest text-white/50 mb-3">General</p>}
                     <ul className="space-y-2">
@@ -87,7 +83,6 @@ export default function AdminSidebar() {
                     </ul>
                 </div>
 
-                {/* ACCOUNT / SETTINGS SECTION */}
                 <div>
                     {!isCollapsed && <p className="px-4 text-[10px] font-bold uppercase tracking-widest text-white/50 mb-3">Management</p>}
                     <ul className="space-y-2">
@@ -109,17 +104,29 @@ export default function AdminSidebar() {
 
             {/* Footer / Profile & Logout */}
             <div className="p-4 border-t border-white/10 bg-black/10">
-                <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 px-2 mb-4'}`}>
+                
+                {/* NEW: Clickable Profile Link */}
+                <NavLink 
+                    to="/admin/profile"
+                    className={({ isActive }) => `
+                        flex items-center p-2 mb-4 rounded-xl transition-all
+                        ${isActive ? 'bg-white/20 shadow-sm' : 'hover:bg-white/10'}
+                        ${isCollapsed ? 'justify-center' : 'gap-3'}
+                    `}
+                    title="Manage Account"
+                >
                     <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
                         <User className="w-5 h-5 text-white" />
                     </div>
                     {!isCollapsed && (
-                        <div className="overflow-hidden">
-                            <p className="text-sm font-bold truncate">Active Admin</p>
-                            <p className="text-xs text-white/60 truncate">System Access</p>
+                        <div className="overflow-hidden text-left">
+                            <p className="text-sm font-bold truncate text-white">
+                                {localStorage.getItem('adminEmail') || "System Admin"}
+                            </p>
+                            <p className="text-xs text-white/60 truncate">Manage Account</p>
                         </div>
                     )}
-                </div>
+                </NavLink>
                 
                 <button 
                     onClick={handleLogout}

@@ -24,6 +24,7 @@ export default function AdminLogin() {
             if (response.ok) {
                 // Save it specifically as the admin token
                 localStorage.setItem('adminToken', data);
+                localStorage.setItem('adminEmail', email);
                 
                 // Redirect to the staff dashboard
                 navigate('/admin/dashboard'); 
