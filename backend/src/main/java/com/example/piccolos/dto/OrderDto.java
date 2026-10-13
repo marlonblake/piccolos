@@ -6,6 +6,7 @@ import java.util.List;
 public record OrderDto(
         Long id,
         Long tableId,
+        Long userId, // ADDED: to capture the user ID from React
         String guestName,
         String orderType,
         String status,

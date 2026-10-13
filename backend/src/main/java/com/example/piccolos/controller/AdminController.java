@@ -73,6 +73,12 @@ public class AdminController {
         );
         response.put("revenueData", revenue);
 
+        List<Map<String, Object>> payments = jdbcTemplate.queryForList(
+                "SELECT invoice_id as invoiceId, payment_date as date, payment_method as method, amount " +
+                        "FROM payments ORDER BY payment_date DESC LIMIT 10"
+        );
+        response.put("recentPayments", payments);
+
         return ResponseEntity.ok(response);
     }
 }

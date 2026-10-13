@@ -23,6 +23,8 @@ public class OrderController {
     @PostMapping("/checkout")
     public ResponseEntity<?> placeOrder(@RequestBody OrderDto orderRequest) {
         try {
+            // Ensure your OrderDto contains 'private Long userId;' and 'private String guestName;'
+            // so the mapper can properly assign them to the Order entity.
             Order order = orderDtoMapper.toEntity(orderRequest);
 
             Order savedOrder = orderRepository.save(order);
