@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const ShoppingCart = () => {
     const [cartItems, setCartItems] = useState(() => {
@@ -8,6 +8,7 @@ const ShoppingCart = () => {
     });
     const [orderSuccess, setOrderSuccess] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
+    const [showAuthPrompt, setShowAuthPrompt] = useState(false);
     const navigate = useNavigate();
 
     const updateCartState = (newCart) => {
@@ -47,37 +48,54 @@ const ShoppingCart = () => {
     };
 
     const calculateTotal = () => {
-        // Fixed missing '*' symbol here
         return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0).toFixed(2);
     };
 
-    const handlePlaceOrder = async () => {
+    const handleInitiateCheckout = () => {
         if (cartItems.length === 0) {
             alert("Your cart is empty!");
             return;
         }
 
+        const token = localStorage.getItem('customerToken');
+        if (token) {
+            const userId = localStorage.getItem('userId');
+            processOrder(userId);
+        } else {
+            setShowAuthPrompt(true);
+        }
+    };
+
+    const processOrder = async (userId = null) => {
         const orderPayload = {
-            guestName: "Walk-in Guest",
+            userId: userId,
+            guestName: userId ? null : "Walk-in Guest",
             orderType: "PICKUP",
             total: Number(calculateTotal()),
             items: cartItems.map(item => ({
-                menuItemId: item.menuItemId,
+                menuItemId: item.menuItemId || item.id,
                 quantity: item.quantity,
                 price: item.price
             }))
         };
 
         try {
+            const headers = { 'Content-Type': 'application/json' };
+            const token = localStorage.getItem('customerToken');
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const response = await fetch('http://localhost:8081/api/orders/checkout', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: headers,
                 body: JSON.stringify(orderPayload)
             });
 
             if (response.ok) {
                 setOrderSuccess(true);
                 updateCartState([]);
+                setShowAuthPrompt(false);
             } else {
                 alert("Failed to place order. Please try again.");
             }
@@ -135,22 +153,13 @@ const ShoppingCart = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
                         {cartItems.map((item, index) => (
                             <div key={item.menuItemId || index} style={{
-                                backgroundColor: '#fff',
-                                borderRadius: '20px',
-                                padding: '20px',
-                                boxShadow: '0 8px 24px rgba(0,0,0,0.04)',
-                                border: '1px solid #f0f0f0',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                flexWrap: 'wrap',
-                                gap: '20px'
+                                backgroundColor: '#fff', borderRadius: '20px', padding: '20px', boxShadow: '0 8px 24px rgba(0,0,0,0.04)',
+                                border: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px'
                             }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: '1 1 300px' }}>
                                     <div style={{
-                                        width: '80px', height: '80px', backgroundColor: '#f8f9fa',
-                                        borderRadius: '16px', overflow: 'hidden', display: 'flex',
-                                        justifyContent: 'center', alignItems: 'center', flexShrink: 0
+                                        width: '80px', height: '80px', backgroundColor: '#f8f9fa', borderRadius: '16px', overflow: 'hidden',
+                                        display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0
                                     }}>
                                         {item.imageUrl ? (
                                             <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -193,15 +202,8 @@ const ShoppingCart = () => {
                         <button
                             onClick={clearCart}
                             style={{
-                                background: 'none',
-                                border: 'none',
-                                color: '#ef4444',
-                                fontFamily: "'Poppins', sans-serif",
-                                fontSize: '16px',
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                padding: '8px',
-                                transition: 'opacity 0.2s',
+                                background: 'none', border: 'none', color: '#ef4444', fontFamily: "'Poppins', sans-serif", fontSize: '16px',
+                                fontWeight: '700', cursor: 'pointer', padding: '8px', transition: 'opacity 0.2s',
                             }}
                             onMouseOver={(e) => e.currentTarget.style.opacity = '0.7'}
                             onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
@@ -216,7 +218,7 @@ const ShoppingCart = () => {
                             <span style={{ fontSize: '26px', fontWeight: '900', color: '#8e2420' }}>LKR {Number(calculateTotal()).toLocaleString()}</span>
                         </div>
                         <button
-                            onClick={handlePlaceOrder}
+                            onClick={handleInitiateCheckout}
                             style={{ width: '100%', padding: '18px', fontSize: '18px', backgroundColor: '#8e2420', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '900', transition: 'background-color 0.2s', boxShadow: '0 4px 14px rgba(142, 36, 32, 0.3)' }}
                             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#a8322d'}
                             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#8e2420'}
@@ -227,30 +229,45 @@ const ShoppingCart = () => {
                 </>
             )}
 
-            {/* UPGRADED: Premium Transparent "Quite Big" Toast Message */}
+            {showAuthPrompt && (
+                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px' }}>
+                    <div style={{ backgroundColor: '#fff', padding: '30px', borderRadius: '20px', maxWidth: '400px', width: '100%', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', textAlign: 'center' }}>
+                        <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#1a1a1a', margin: '0 0 10px 0' }}>How would you like to checkout?</h3>
+                        <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px', lineHeight: '1.5' }}>Log in to track your orders and save your details for next time.</p>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <Link 
+                                to="/login" 
+                                style={{ display: 'block', width: '100%', backgroundColor: '#1a1a1a', color: '#fff', padding: '14px', borderRadius: '12px', textDecoration: 'none', fontWeight: 'bold', fontSize: '15px' }}
+                            >
+                                Log In / Register
+                            </Link>
+                            
+                            <button 
+                                onClick={() => processOrder(null)}
+                                style={{ width: '100%', backgroundColor: '#fff', border: '2px solid #f0f0f0', color: '#666', padding: '14px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', fontSize: '15px' }}
+                            >
+                                Continue as Guest
+                            </button>
+                        </div>
+                        
+                        <button 
+                            onClick={() => setShowAuthPrompt(false)}
+                            style={{ width: '100%', marginTop: '20px', background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {toastMessage && (
                 <div style={{
-                    position: 'fixed',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    backgroundColor: 'rgba(20, 20, 20, 0.85)',
-                    backdropFilter: 'blur(16px)',
-                    WebkitBackdropFilter: 'blur(16px)',
-                    color: '#ffffff',
-                    padding: '24px 48px',
-                    borderRadius: '50px',
-                    boxShadow: '0 30px 60px rgba(0,0,0,0.4)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    zIndex: 9999,
-                    fontWeight: '700',
-                    fontSize: '22px',
-                    letterSpacing: '0.5px',
-                    textAlign: 'center',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '16px',
-                    animation: 'fadeIn 0.3s ease-out'
+                    position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: 'rgba(20, 20, 20, 0.85)',
+                    backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', color: '#ffffff', padding: '24px 48px',
+                    borderRadius: '50px', boxShadow: '0 30px 60px rgba(0,0,0,0.4)', border: '1px solid rgba(255, 255, 255, 0.15)',
+                    zIndex: 9999, fontWeight: '700', fontSize: '22px', letterSpacing: '0.5px', textAlign: 'center',
+                    display: 'flex', alignItems: 'center', gap: '16px', animation: 'fadeIn 0.3s ease-out'
                 }}>
                     <span style={{ color: '#ef4444', fontSize: '26px' }}>✓</span> {toastMessage}
                 </div>

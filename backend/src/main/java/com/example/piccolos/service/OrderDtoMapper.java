@@ -3,8 +3,10 @@ package com.example.piccolos.service;
 import com.example.piccolos.entity.MenuItem;
 import com.example.piccolos.entity.Order;
 import com.example.piccolos.entity.OrderItem;
+import com.example.piccolos.entity.User;
 import com.example.piccolos.dto.OrderDto;
 import com.example.piccolos.repository.StaffOrderItemRepository;
+import com.example.piccolos.repository.UserRepository;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -17,9 +19,11 @@ import java.util.stream.Collectors;
 public class OrderDtoMapper {
 
     private final StaffOrderItemRepository itemRepo;
+    private final UserRepository userRepo; // ADDED: to fetch the User entity
 
-    public OrderDtoMapper(StaffOrderItemRepository itemRepo) {
+    public OrderDtoMapper(StaffOrderItemRepository itemRepo, UserRepository userRepo) {
         this.itemRepo = itemRepo;
+        this.userRepo = userRepo;
     }
 
     public OrderDto toDto(Order order) {
@@ -40,18 +44,32 @@ public class OrderDtoMapper {
                 .map(OrderDto.ItemDto::lineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return new OrderDto(order.getId(), order.getTableId(), order.getGuestName(),
+        // ADDED: safely map the User ID back to the DTO if it exists
+        Long userId = (order.getUser() != null) ? (long) order.getUser().getId() : null;
+
+        return new OrderDto(order.getId(), order.getTableId(), userId, order.getGuestName(),
                 order.getOrderType(), order.getStatus(), items, total);
     }
 
     public Order toEntity(OrderDto dto) {
         Order order = new Order();
-        order.setGuestName(dto.guestName());
         order.setTableId(dto.tableId());
-
         order.setOrderType(dto.orderType());
         order.setStatus("PENDING");
         order.setCreatedAt(LocalDateTime.now());
+
+        // Check if there is a logged-in user
+        if (dto.userId() != null) {
+            User user = userRepo.findById(dto.userId().intValue())
+                    .orElseThrow(() -> new RuntimeException("User not found with ID: " + dto.userId()));
+            order.setUser(user);
+
+            // Overwrite the guestName with the registered user's first name
+            order.setGuestName(user.getFname());
+        } else {
+            // Otherwise, keep the default "Walk-in Guest" from the DTO
+            order.setGuestName(dto.guestName());
+        }
 
         if (dto.total() != null) {
             order.setTotalAmount(dto.total().doubleValue());
@@ -61,7 +79,6 @@ public class OrderDtoMapper {
         if (dto.items() != null) {
             List<OrderItem> orderItems = dto.items().stream().map(itemDto -> {
                 OrderItem item = new OrderItem();
-
                 item.setQuantity(itemDto.quantity());
 
                 if (itemDto.menuItemId() != null) {

@@ -23,8 +23,10 @@ public class Order {
     @Column(name = "table_id")
     private Long tableId;
 
-    @Column(name = "user_id")
-    private Long userId;
+    // REPLACED: Changed from 'Long userId' to a relational 'User' entity mapping
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -55,8 +57,9 @@ public class Order {
     public Long getTableId() { return tableId; }
     public void setTableId(Long tableId) { this.tableId = tableId; }
 
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
+    // REPLACED: Updated Getters and Setters to use the User object
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
