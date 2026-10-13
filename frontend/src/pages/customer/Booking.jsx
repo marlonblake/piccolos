@@ -97,6 +97,8 @@ export default function Booking() {
 
             setLoading(true);
 
+            const userId = localStorage.getItem('userId');
+
             const response = await fetch(
                 'http://localhost:8081/api/reservations',
                 {
@@ -110,7 +112,8 @@ export default function Booking() {
                         tableId: selectedTable.id,
                         partySize,
                         reservationDate: date,
-                        reservationTime: `${time}:00`
+                        reservationTime: `${time}:00`,
+                        userId: userId ? Number(userId) : null
                     })
                 }
             );

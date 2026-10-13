@@ -17,6 +17,8 @@ import AdminRegister from './pages/admin/AdminRegister';
 import AdminPOS from './pages/admin/AdminPOS';
 import AdminReports from './pages/admin/AdminReports';
 import AdminProfile from './pages/admin/AdminProfile';
+import AdminTables from './pages/admin/AdminTables';
+import AdminReservations from './pages/admin/AdminReservations';
 
 // Components
 import Navbar from './components/Navbar';
@@ -76,6 +78,8 @@ export default function App() {
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />
                     <Route path="/admin/register" element={<AdminRegister />} />
                     <Route path="/admin/pos" element={<AdminPOS />} />
+                    <Route path="/admin/tables" element={<AdminTables />} />
+                    <Route path="/admin/reservations" element={<AdminReservations />} />
                     <Route path="/admin/menu" element={<AdminMenu />} />
                     <Route path="/admin/stats" element={<AdminReports />} />
                     <Route path="/admin/profile" element={<AdminProfile />} />

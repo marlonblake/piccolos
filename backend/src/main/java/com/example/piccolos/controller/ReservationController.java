@@ -2,8 +2,7 @@ package com.example.piccolos.controller;
 
 import com.example.piccolos.dto.ReservationRequest;
 import com.example.piccolos.dto.ReservationResponse;
-import com.example.piccolos.entity.Reservation;
-import com.example.piccolos.entity.RestaurantTable;
+import com.example.piccolos.dto.RestaurantTableResponse;
 import com.example.piccolos.service.ReservationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,65 +23,34 @@ public class ReservationController {
     }
 
     @GetMapping("/availability")
-    public ResponseEntity<?> getAvailability(
+    public ResponseEntity<List<RestaurantTableResponse>> getAvailability(
             @RequestParam LocalDate date,
             @RequestParam LocalTime time,
             @RequestParam int partySize
     ) {
-        try {
-            List<RestaurantTable> tables =
-                    reservationService.getAvailableTables(
-                            date,
-                            time,
-                            partySize
-                    );
-
-            return ResponseEntity.ok(tables);
-
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        List<RestaurantTableResponse> tables = reservationService.getAvailableTables(date, time, partySize)
+                .stream()
+                .map(RestaurantTableResponse::new)
+                .toList();
+        return ResponseEntity.ok(tables);
     }
 
     @PostMapping
-    public ResponseEntity<?> createReservation(
+    public ResponseEntity<ReservationResponse> createReservation(
             @RequestBody ReservationRequest request
     ) {
-        try {
-
-            ReservationResponse response =
-                    reservationService.createReservation(request);
-
-            return ResponseEntity.ok(response);
-
-        } catch (RuntimeException e) {
-
-            return ResponseEntity
-                    .badRequest()
-                    .body(e.getMessage());
-        }
+        return ResponseEntity.ok(reservationService.createReservation(request));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getReservation(
+    public ResponseEntity<ReservationResponse> getReservation(
             @PathVariable Integer id
     ) {
-        try {
-
-            return ResponseEntity.ok(
-                    reservationService.getReservation(id)
-            );
-
-        } catch (RuntimeException e) {
-
-            return ResponseEntity
-                    .notFound()
-                    .build();
-        }
+        return ResponseEntity.ok(reservationService.getReservation(id));
     }
 
     @GetMapping("/date/{date}")
-    public ResponseEntity<List<Reservation>> getReservationsByDate(
+    public ResponseEntity<List<ReservationResponse>> getReservationsByDate(
             @PathVariable LocalDate date
     ) {
         return ResponseEntity.ok(
@@ -100,22 +68,10 @@ public class ReservationController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> cancelReservation(
+    public ResponseEntity<String> cancelReservation(
             @PathVariable Integer id
     ) {
-        try {
-
-            reservationService.cancelReservation(id);
-
-            return ResponseEntity.ok(
-                    "Reservation cancelled successfully."
-            );
-
-        } catch (RuntimeException e) {
-
-            return ResponseEntity
-                    .badRequest()
-                    .body(e.getMessage());
-        }
+        reservationService.cancelReservation(id);
+        return ResponseEntity.ok("Reservation cancelled successfully.");
     }
 }
