@@ -6,6 +6,7 @@ import {
     UserCheck, 
     ShoppingBag, 
     Calendar, 
+    Armchair,
     BarChart3,
     LogOut, 
     Menu, 
@@ -72,6 +73,12 @@ export default function AdminSidebar() {
                             <NavLink to="/admin/pos" className={navLinkClass}>
                                 <ShoppingBag className="w-5 h-5 flex-shrink-0" />
                                 {!isCollapsed && <span>Orders & POS</span>}
+                            </NavLink>
+                        </li>
+                        <li>
+                            <NavLink to="/admin/tables" className={navLinkClass}>
+                                <Armchair className="w-5 h-5 flex-shrink-0" />
+                                {!isCollapsed && <span>Restaurant Tables</span>}
                             </NavLink>
                         </li>
                         <li>

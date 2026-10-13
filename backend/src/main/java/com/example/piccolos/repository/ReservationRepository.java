@@ -14,6 +14,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, Intege
 
     List<Reservation> findByReservationDate(LocalDate reservationDate);
 
+    List<Reservation> findAllByOrderByReservationDateAscReservationTimeAsc();
+
+    List<Reservation> findAllByReservationDateOrderByReservationTimeAsc(LocalDate reservationDate);
+
     List<Reservation> findByReservationDateAndReservationTime(
             LocalDate reservationDate,
             LocalTime reservationTime
@@ -27,5 +31,20 @@ public interface ReservationRepository extends JpaRepository<Reservation, Intege
             Integer tableId,
             LocalDate reservationDate,
             LocalTime reservationTime
+    );
+
+    boolean existsByRestaurantTableId(Integer tableId);
+
+    boolean existsByRestaurantTableIdAndReservationDateGreaterThanEqualAndPartySizeGreaterThan(
+            Integer tableId,
+            LocalDate reservationDate,
+            int partySize
+    );
+
+    boolean existsByRestaurantTableIdAndReservationDateAndReservationTimeAndIdNot(
+            Integer tableId,
+            LocalDate reservationDate,
+            LocalTime reservationTime,
+            Integer id
     );
 }

@@ -7,9 +7,11 @@ public class ReservationResponse {
     private Integer reservationId;
     private String guestName;
     private String guestPhone;
+    private Integer partySize;
     private Integer tableId;
     private Integer tableNumber;
     private Integer tableCapacity;
+    private Integer userId;
     private String reservationDate;
     private String reservationTime;
 
@@ -17,11 +19,16 @@ public class ReservationResponse {
         this.reservationId = reservation.getId();
         this.guestName = reservation.getGuestName();
         this.guestPhone = reservation.getGuestPhone();
+        this.partySize = reservation.getPartySize();
 
         if (reservation.getRestaurantTable() != null) {
             this.tableId = reservation.getRestaurantTable().getId();
             this.tableNumber = reservation.getRestaurantTable().getTableNumber();
             this.tableCapacity = reservation.getRestaurantTable().getCapacity();
+        }
+
+        if (reservation.getUser() != null) {
+            this.userId = reservation.getUser().getId();
         }
 
         if (reservation.getReservationDate() != null) {
@@ -45,6 +52,10 @@ public class ReservationResponse {
         return guestPhone;
     }
 
+    public Integer getPartySize() {
+        return partySize;
+    }
+
     public Integer getTableId() {
         return tableId;
     }
@@ -55,6 +66,10 @@ public class ReservationResponse {
 
     public Integer getTableCapacity() {
         return tableCapacity;
+    }
+
+    public Integer getUserId() {
+        return userId;
     }
 
     public String getReservationDate() {

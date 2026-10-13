@@ -24,6 +24,9 @@ public class Reservation {
     @Column(name = "reservation_time")
     private LocalTime reservationTime;
 
+    @Column(name = "party_size")
+    private Integer partySize;
+
     //Links to the RestaurantTable entity
     @ManyToOne
     @JoinColumn(name = "table_id")
@@ -50,6 +53,9 @@ public class Reservation {
     public LocalTime getReservationTime() { return reservationTime; }
     public void setReservationTime(LocalTime reservationTime) { this.reservationTime = reservationTime; }
 
+    public Integer getPartySize() { return partySize; }
+    public void setPartySize(Integer partySize) { this.partySize = partySize; }
+
     public RestaurantTable getRestaurantTable() { return restaurantTable; }
     public void setRestaurantTable(RestaurantTable restaurantTable) { this.restaurantTable = restaurantTable; }
 
@@ -57,4 +63,3 @@ public class Reservation {
     public void setUser(User user) { this.user = user; }
     
 }
-
