@@ -13,7 +13,7 @@ export default function AdminLogin() {
         
         try {
             // Notice this points to the admin endpoint!
-            const response = await fetch('http://localhost:8081/api/auth/admin/login', {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/admin/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })

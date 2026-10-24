@@ -17,7 +17,7 @@ export default function AdminRegister() {
       // Retrieve the admin token you saved during admin login
       const token = localStorage.getItem('adminToken'); 
         
-      const response = await fetch('http://localhost:8081/api/auth/admin/register', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/admin/register`, {
         method: 'POST',
         headers: { 
             'Content-Type': 'application/json',
