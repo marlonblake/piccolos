@@ -2,6 +2,58 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Utensils, Smartphone, MapPin, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 
+// --- MENU TICKER COMPONENT ---
+const MenuTicker = () => {
+  const tickerItems = [
+    "Signature Pizzas",
+    "Hot Honey Chicken",
+    "Loaded Fries",
+    "Kochchi Prawns Spaghetti",
+    "Korean Crispy Chicken",
+    "Mongolian Fried Rice",
+    "The Baconator",
+    "Blueberry Cheesecake",
+    "Classic Margherita",
+    "Fresh Mojitos"
+  ];
+
+  return (
+    <div 
+      aria-hidden="true" 
+      role="marquee" 
+      className="relative overflow-hidden py-3.5" 
+      style={{ backgroundColor: '#FDFBF7', borderBottom: '1px solid #f0e6d2' }}
+    >
+      <style>
+        {`
+          @keyframes ticker {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-50%, 0, 0); }
+          }
+        `}
+      </style>
+
+      {/* Gradient Fades for smooth entry/exit */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16" style={{ background: 'linear-gradient(to right, #FDFBF7, transparent)' }}></div>
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16" style={{ background: 'linear-gradient(to left, #FDFBF7, transparent)' }}></div>
+      
+      {/* Scrolling Content */}
+      <div className="flex whitespace-nowrap w-max" style={{ animation: 'ticker 40s linear infinite' }}>
+        {[...tickerItems, ...tickerItems].map((item, index) => (
+          <span 
+            key={index} 
+            className="mx-5 flex items-center gap-5 text-[0.7rem] font-bold uppercase tracking-[0.38em]" 
+            style={{ color: '#D45D3C' }}
+          >
+            {item}
+            <span style={{ color: 'rgba(212, 93, 60, 0.35)' }}>◆</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export default function Home() {
   const reviews = [
     {
@@ -38,24 +90,6 @@ export default function Home() {
   const prevReview = () => {
     setCurrentReview((prev) => (prev === 0 ? reviews.length - 1 : prev - 1));
   };
-
-  // const testSecureEndpoint = async () => {
-  //   const token = localStorage.getItem('customerToken');
-  //   try {
-  //     const response = await fetch('http://localhost:8081/api/customer/dashboard', {
-  //       method: 'GET',
-  //       headers: { 'Authorization': `Bearer ${token}` }
-  //     });
-  //     if (response.ok) {
-  //       const data = await response.text();
-  //       alert(data); 
-  //     } else {
-  //       alert("Access Denied! Status: " + response.status); 
-  //     }
-  //   } catch (error) {
-  //     alert("Network Error");
-  //   }
-  // };
 
   return (
     <div className="bg-[#FDFBF7] font-sans text-[#2C3E2D]">
@@ -122,6 +156,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* --- MENU TICKER INJECTED HERE --- */}
+      <MenuTicker />
 
       {/* QUICK HIGHLIGHTS */}
       <section className="py-20 px-4 max-w-7xl mx-auto" id="about">
