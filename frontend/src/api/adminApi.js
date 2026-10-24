@@ -1,4 +1,4 @@
-const API = "http://localhost:8081/api";
+const API = `${import.meta.env.VITE_API_BASE_URL}/api`;
 
 export async function adminRequest(path, options = {}) {
     const token = localStorage.getItem("adminToken");

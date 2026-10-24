@@ -38,7 +38,7 @@ export default function AdminMenu() {
     const fetchCategories = async () => {
         try {
             const response = await fetch(
-                "http://localhost:8081/api/categories"
+                `${import.meta.env.VITE_API_BASE_URL}/api/categories`
             );
 
             if (!response.ok) {
@@ -55,7 +55,7 @@ export default function AdminMenu() {
     const fetchMenuItems = async () => {
         try {
             const response = await fetch(
-                "http://localhost:8081/api/menu"
+                `${import.meta.env.VITE_API_BASE_URL}/api/menu`
             );
 
             if (!response.ok) {
@@ -87,7 +87,7 @@ export default function AdminMenu() {
 
         try {
             const response = await fetch(
-                "http://localhost:8081/api/admin/upload",
+                `${import.meta.env.VITE_API_BASE_URL}/api/admin/upload`,
                 {
                     method: "POST",
                     headers: {
@@ -225,7 +225,7 @@ export default function AdminMenu() {
 
         try {
             const response = await fetch(
-                "http://localhost:8081/api/admin/categories",
+                `${import.meta.env.VITE_API_BASE_URL}/api/admin/categories`,
                 {
                     method: "POST",
                     headers: {
@@ -248,7 +248,7 @@ export default function AdminMenu() {
 
             // Refresh the category list
             const categoriesResponse = await fetch(
-                "http://localhost:8081/api/categories"
+                `${import.meta.env.VITE_API_BASE_URL}/api/categories`
             );
 
             if (!categoriesResponse.ok) {
@@ -304,7 +304,7 @@ export default function AdminMenu() {
 
         const url = isEditing
             ? `http://localhost:8081/api/admin/menu/${editingId}`
-    : "http://localhost:8081/api/admin/menu";
+    : `${import.meta.env.VITE_API_BASE_URL}/api/admin/menu`;
 
 try {
     const response = await fetch(url, {

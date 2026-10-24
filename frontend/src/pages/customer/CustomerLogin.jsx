@@ -17,7 +17,7 @@ export default function CustomerLogin() {
     setMessage(''); // Clears any previous error messages
 
     try {
-      const response = await fetch('http://localhost:8081/api/auth/user/login', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/user/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })

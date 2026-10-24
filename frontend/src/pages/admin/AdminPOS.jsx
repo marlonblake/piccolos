@@ -4,7 +4,7 @@ import {
     ArrowLeft, ShoppingBag, Utensils, Plus, Trash2, X, Receipt, Volume2, VolumeX
 } from "lucide-react";
 
-const API = "http://localhost:8081/api";
+const API = `${import.meta.env.VITE_API_BASE_URL}/api`;
 const TABLE_COUNT = 10; // change this to match the restaurant
 const POLL_MS = 5000;
 

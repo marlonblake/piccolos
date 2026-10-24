@@ -14,7 +14,7 @@ const CustomerMenu = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const categoryResponse = await fetch('http://localhost:8081/api/categories');
+                const categoryResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/categories`);
                 if (categoryResponse.ok) {
                     const categoryData = await categoryResponse.json();
                     if (Array.isArray(categoryData)) {
@@ -23,7 +23,7 @@ const CustomerMenu = () => {
                     }
                 }
 
-                const menuResponse = await fetch('http://localhost:8081/api/menu');
+                const menuResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/menu`);
                 if (menuResponse.ok) {
                     const menuData = await menuResponse.json();
                     if (Array.isArray(menuData)) {

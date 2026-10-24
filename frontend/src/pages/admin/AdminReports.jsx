@@ -24,7 +24,7 @@ export default function AdminReports() {
         const fetchStats = async () => {
             try {
                 const token = localStorage.getItem('adminToken'); 
-                const response = await fetch('http://localhost:8081/api/admin/full-stats', {
+                const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/full-stats`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${token}`,

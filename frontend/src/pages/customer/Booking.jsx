@@ -46,7 +46,7 @@ export default function Booking() {
             setLoading(true);
 
             const response = await fetch(
-                `http://localhost:8081/api/reservations/availability?date=${date}&time=${time}:00&partySize=${partySize}`
+                `${import.meta.env.VITE_API_BASE_URL}/api/reservations/availability?date=${date}&time=${time}:00&partySize=${partySize}`
             );
 
             const data = await response.json();
@@ -100,7 +100,7 @@ export default function Booking() {
             const userId = localStorage.getItem('userId');
 
             const response = await fetch(
-                'http://localhost:8081/api/reservations',
+                `${import.meta.env.VITE_API_BASE_URL}/api/reservations`,
                 {
                     method: 'POST',
                     headers: {
