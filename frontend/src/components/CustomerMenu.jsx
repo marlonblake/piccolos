@@ -9,7 +9,6 @@ const CustomerMenu = () => {
 
     const [selectedItem, setSelectedItem] = useState(null);
     const [isAdded, setIsAdded] = useState(false);
-    // NEW: Quantity state added here
     const [quantity, setQuantity] = useState(1);
 
     useEffect(() => {
@@ -66,7 +65,6 @@ const CustomerMenu = () => {
     const openModal = (item) => {
         setSelectedItem(item);
         setIsAdded(false);
-        // NEW: Reset quantity to 1 every time a new item is opened
         setQuantity(1);
     };
 
@@ -79,14 +77,13 @@ const CustomerMenu = () => {
         const itemCategory = item.category?.name || "MENU ITEM";
 
         if (itemIndex >= 0) {
-            // NEW: Add the selected quantity instead of just +1
             existingCart[itemIndex].quantity += quantity;
         } else {
             existingCart.push({
                 menuItemId: itemId,
                 name: item.name,
                 price: item.price,
-                quantity: quantity, // NEW: Use selected quantity
+                quantity: quantity,
                 imageUrl: itemImage,
                 category: itemCategory
             });
@@ -99,17 +96,40 @@ const CustomerMenu = () => {
 
     return (
         <div style={{ padding: '120px 20px 40px', maxWidth: '1200px', margin: 'auto', fontFamily: "'Poppins', sans-serif", minHeight: '70vh' }}>
+            {/* Added style block to hide scrollbar on webkit browsers for the category slider */}
+            <style>
+                {`
+                    .category-scroll-container::-webkit-scrollbar {
+                        display: none;
+                    }
+                `}
+            </style>
 
             <div style={{ marginBottom: '30px' }}>
                 <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', color: '#1a1a1a' }}>OUR MENU</h2>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '30px', flexWrap: 'wrap' }}>
+            {/* EDITED: Changed from flex-wrap to a scrollable horizontal line */}
+            <div 
+                className="category-scroll-container"
+                style={{ 
+                    display: 'flex', 
+                    gap: '12px', 
+                    marginBottom: '30px', 
+                    overflowX: 'auto', 
+                    whiteSpace: 'nowrap',
+                    paddingBottom: '10px',
+                    WebkitOverflowScrolling: 'touch',
+                    scrollbarWidth: 'none', // For Firefox
+                    msOverflowStyle: 'none' // For IE/Edge
+                }}
+            >
                 {categories.map(cat => (
                     <button
                         key={cat}
                         onClick={() => setSelectedCategory(cat)}
                         style={{
+                            flexShrink: 0, // Prevent buttons from squishing
                             padding: '8px 20px',
                             borderRadius: '30px',
                             border: 'none',
@@ -252,7 +272,19 @@ const CustomerMenu = () => {
 
                         <div style={{ padding: '24px', textAlign: 'center', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '900', color: '#1a1a1a' }}>{item.name}</h3>
-                            <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>{item.description || "A delicious selection prepared fresh daily."}</p>
+                            {/* EDITED: Truncated description using webkit-line-clamp */}
+                            <p style={{ 
+                                margin: 0, 
+                                fontSize: '14px', 
+                                color: '#666',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                            }}>
+                                {item.description || "A delicious selection prepared fresh daily."}
+                            </p>
                         </div>
                     </div>
                 ))}
@@ -348,12 +380,12 @@ const CustomerMenu = () => {
                             <hr style={{ borderTop: '1px solid #f0f0f0', width: '100%', margin: '0 0 24px 0' }} />
 
                             <div style={{ fontSize: '13px', color: '#1a1a1a', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px' }}>Description</div>
+                            {/* Keep full description in modal view */}
                             <p style={{ color: '#666', lineHeight: '1.6', margin: '0 0 auto 0', fontSize: '15px' }}>
                                 {selectedItem.description || "A delicious selection prepared fresh daily."}
                             </p>
 
                             <div style={{ marginTop: 'auto' }}>
-                                {/* NEW: Quantity Pill UI */}
                                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
                                     <span style={{ fontSize: '13px', color: '#1a1a1a', fontWeight: '800', textTransform: 'uppercase', marginRight: '16px' }}>Quantity</span>
                                     <div style={{
