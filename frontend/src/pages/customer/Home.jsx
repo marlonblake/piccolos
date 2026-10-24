@@ -42,7 +42,7 @@ export default function Home() {
   const testSecureEndpoint = async () => {
     const token = localStorage.getItem('customerToken');
     try {
-      const response = await fetch('http://localhost:8081/api/customer/dashboard', {
+      const response = await fetch('http://209.74.66.158:8081/api/customer/dashboard', {
         method: 'GET',
         headers: { 'Authorization': `Bearer ${token}` }
       });

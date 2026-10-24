@@ -59,7 +59,7 @@ const ShoppingCart = () => {
         };
 
         try {
-            const response = await fetch('http://localhost:8081/api/orders/checkout', {
+            const response = await fetch('http://209.74.66.158:8081/api/orders/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(orderPayload)

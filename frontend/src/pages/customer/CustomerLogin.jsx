@@ -19,7 +19,7 @@ export default function CustomerLogin() {
     
     try {
       // Your exact Spring Boot endpoint
-      const response = await fetch('http://localhost:8081/api/auth/user/login', {
+      const response = await fetch('http://209.74.66.158:8081/api/auth/user/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })

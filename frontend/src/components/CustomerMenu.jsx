@@ -6,7 +6,7 @@ function CustomerMenu() {
     const [error, setError] = useState("");
 
     useEffect(() => {
-        fetch("http://localhost:8081/api/menu")
+        fetch("http://209.74.66.158:8081/api/menu")
             .then(response => {
                 if (!response.ok) {
                     throw new Error("Failed to fetch menu");

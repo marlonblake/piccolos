@@ -18,7 +18,7 @@ function AdminMenu() {
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const response = await fetch("http://localhost:8081/api/categories");
+                const response = await fetch("http://209.74.66.158:8081/api/categories");
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const data = await response.json();
                 setCategories(data);
@@ -33,7 +33,7 @@ function AdminMenu() {
     // Fetch menu items — pulled into its own function so we can re-call it after add/edit/delete
     const fetchMenuItems = async () => {
         try {
-            const response = await fetch("http://localhost:8081/api/menu");
+            const response = await fetch("http://209.74.66.158:8081/api/menu");
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
             setMenuItems(data);
@@ -74,8 +74,8 @@ function AdminMenu() {
         // Otherwise, we're adding a brand new one (POST).
         const isEditing = editingId !== null;
         const url = isEditing
-            ? `http://localhost:8081/api/admin/menu/${editingId}`
-            : "http://localhost:8081/api/admin/menu";
+            ? `http://209.74.66.158:8081/api/admin/menu/${editingId}`
+            : "http://209.74.66.158:8081/api/admin/menu";
         const method = isEditing ? "PUT" : "POST";
 
         console.log(`${method} to ${url}:`, menuItem);
@@ -130,7 +130,7 @@ function AdminMenu() {
         const adminToken = localStorage.getItem("adminToken");
 
         try {
-            const response = await fetch(`http://localhost:8081/api/admin/menu/${id}`, {
+            const response = await fetch(`http://209.74.66.158:8081/api/admin/menu/${id}`, {
                 method: "DELETE",
                 headers: {
                     "Authorization": `Bearer ${adminToken}`
