@@ -16,16 +16,24 @@ const CustomerMenu = () => {
 
     const isPizzaItem = (item) => {
         if (!item) return false;
-        const catName = item.category?.name || "";
-        const catId = item.category_id || item.categoryId;
-        return catName.toLowerCase() === "pizza" || catId === 2;
+        const catName = (item.category?.name || "").toLowerCase();
+        const catId = item.category?.id ?? item.category_id ?? item.categoryId;
+        return (
+            catName === "pizza" ||
+            catName === "signature range" ||
+            catName === "premium range" ||
+            catId === 2 ||
+            catId === 3 ||
+            (item.price11 != null && item.price14 != null)
+        );
     };
 
     const getEffectiveUnitPrice = (item, size = selectedSize) => {
         if (!item) return 0;
         const basePrice = Number(item.price) || 0;
-        if (isPizzaItem(item) && size === '14"') {
-            return basePrice + LARGE_PIZZA_UPCHARGE;
+        if (isPizzaItem(item)) {
+            if (size === '14"') return Number(item.price14) || basePrice + LARGE_PIZZA_UPCHARGE;
+            return Number(item.price11) || basePrice;
         }
         return basePrice;
     };
@@ -67,17 +75,8 @@ const CustomerMenu = () => {
 
     const filteredMenu = menuItems.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-
-        let itemCategoryName = "Unknown";
-        if (item.category && item.category.name) {
-            itemCategoryName = item.category.name;
-        } else {
-            const categoryMap = { 1: "Appetizers", 2: "Pizza", 3: "Lasagna", 4: "Wraps", 5: "Spaghetti", 6: "Drinks", 7: "Desserts" };
-            itemCategoryName = categoryMap[item.category_id || item.categoryId] || "Unknown";
-        }
-
+        const itemCategoryName = item.category?.name || "Unknown";
         const matchesCategory = selectedCategory === "All" || itemCategoryName === selectedCategory;
-
         return matchesSearch && matchesCategory;
     });
 
@@ -123,7 +122,6 @@ const CustomerMenu = () => {
 
     return (
         <div style={{ padding: '120px 20px 40px', maxWidth: '1200px', margin: 'auto', fontFamily: "'Poppins', sans-serif", minHeight: '70vh' }}>
-            {/* Added style block to hide scrollbar on webkit browsers for the category slider */}
             <style>
                 {`
                     .category-scroll-container::-webkit-scrollbar {
@@ -136,7 +134,6 @@ const CustomerMenu = () => {
                 <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', color: '#1a1a1a' }}>OUR MENU</h2>
             </div>
 
-            {/* EDITED: Changed from flex-wrap to a scrollable horizontal line */}
             <div
                 className="category-scroll-container"
                 style={{
@@ -147,8 +144,8 @@ const CustomerMenu = () => {
                     whiteSpace: 'nowrap',
                     paddingBottom: '10px',
                     WebkitOverflowScrolling: 'touch',
-                    scrollbarWidth: 'none', // For Firefox
-                    msOverflowStyle: 'none' // For IE/Edge
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none'
                 }}
             >
                 {categories.map(cat => (
@@ -156,7 +153,7 @@ const CustomerMenu = () => {
                         key={cat}
                         onClick={() => setSelectedCategory(cat)}
                         style={{
-                            flexShrink: 0, // Prevent buttons from squishing
+                            flexShrink: 0,
                             padding: '8px 20px',
                             borderRadius: '30px',
                             border: 'none',
@@ -290,6 +287,7 @@ const CustomerMenu = () => {
                                 <img
                                     src={item.imageUrl || item.image_url}
                                     alt={item.name}
+                                    loading="lazy"
                                     style={{ width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }}
                                 />
                             ) : (
@@ -299,7 +297,6 @@ const CustomerMenu = () => {
 
                         <div style={{ padding: '24px', textAlign: 'center', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '900', color: '#1a1a1a' }}>{item.name}</h3>
-                            {/* EDITED: Truncated description using webkit-line-clamp */}
                             <p style={{
                                 margin: 0,
                                 fontSize: '14px',
@@ -363,14 +360,13 @@ const CustomerMenu = () => {
                             backgroundColor: '#f8f9fa'
                         }}>
                             {selectedItem.imageUrl || selectedItem.image_url ? (
-                                <img src={selectedItem.imageUrl || selectedItem.image_url} alt={selectedItem.name} style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px'}} />
+                                <img src={selectedItem.imageUrl || selectedItem.image_url} alt={selectedItem.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
                             ) : (
                                 <span style={{ color: '#b0b0b0', fontWeight: 'bold' }}>IMAGE PLACEHOLDER</span>
                             )}
                         </div>
 
                         <div style={{ flex: '1', padding: window.innerWidth < 768 ? '20px 0 0 0' : '0 0 0 40px', display: 'flex', flexDirection: 'column' }}>
-
                             <div style={{
                                 display: 'inline-block',
                                 backgroundColor: '#f4f6f8',
@@ -407,7 +403,6 @@ const CustomerMenu = () => {
                             <hr style={{ borderTop: '1px solid #f0f0f0', width: '100%', margin: '0 0 24px 0' }} />
 
                             <div style={{ fontSize: '13px', color: '#1a1a1a', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px' }}>Description</div>
-                            {/* Keep full description in modal view */}
                             <p style={{ color: '#666', lineHeight: '1.6', margin: '0 0 20px 0', fontSize: '15px' }}>
                                 {selectedItem.description || "A delicious selection prepared fresh daily."}
                             </p>
@@ -419,8 +414,8 @@ const CustomerMenu = () => {
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                         {[
-                                            { id: '11"', label: 'Medium 11"', price: Number(selectedItem.price) || 0 },
-                                            { id: '14"', label: 'Large 14"', price: (Number(selectedItem.price) || 0) + LARGE_PIZZA_UPCHARGE }
+                                            { id: '11"', label: 'Medium 11"', price: getEffectiveUnitPrice(selectedItem, '11"') },
+                                            { id: '14"', label: 'Large 14"', price: getEffectiveUnitPrice(selectedItem, '14"') }
                                         ].map((option) => {
                                             const active = selectedSize === option.id;
                                             return (
