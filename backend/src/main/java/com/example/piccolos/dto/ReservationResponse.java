@@ -14,12 +14,14 @@ public class ReservationResponse {
     private Integer userId;
     private String reservationDate;
     private String reservationTime;
+    private String notes;
 
     public ReservationResponse(Reservation reservation) {
         this.reservationId = reservation.getId();
         this.guestName = reservation.getGuestName();
         this.guestPhone = reservation.getGuestPhone();
         this.partySize = reservation.getPartySize();
+        this.notes = reservation.getNotes();
 
         if (reservation.getRestaurantTable() != null) {
             this.tableId = reservation.getRestaurantTable().getId();
@@ -40,43 +42,15 @@ public class ReservationResponse {
         }
     }
 
-    public Integer getReservationId() {
-        return reservationId;
-    }
-
-    public String getGuestName() {
-        return guestName;
-    }
-
-    public String getGuestPhone() {
-        return guestPhone;
-    }
-
-    public Integer getPartySize() {
-        return partySize;
-    }
-
-    public Integer getTableId() {
-        return tableId;
-    }
-
-    public Integer getTableNumber() {
-        return tableNumber;
-    }
-
-    public Integer getTableCapacity() {
-        return tableCapacity;
-    }
-
-    public Integer getUserId() {
-        return userId;
-    }
-
-    public String getReservationDate() {
-        return reservationDate;
-    }
-
-    public String getReservationTime() {
-        return reservationTime;
-    }
+    public Integer getReservationId() { return reservationId; }
+    public String getGuestName() { return guestName; }
+    public String getGuestPhone() { return guestPhone; }
+    public Integer getPartySize() { return partySize; }
+    public Integer getTableId() { return tableId; }
+    public Integer getTableNumber() { return tableNumber; }
+    public Integer getTableCapacity() { return tableCapacity; }
+    public Integer getUserId() { return userId; }
+    public String getReservationDate() { return reservationDate; }
+    public String getReservationTime() { return reservationTime; }
+    public String getNotes() { return notes; }
 }

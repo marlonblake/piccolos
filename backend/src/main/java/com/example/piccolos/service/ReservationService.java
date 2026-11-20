@@ -13,12 +13,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
 @Service
 public class ReservationService {
+
+    private static final long RESERVATION_DURATION_MINUTES = 90;
 
     private final ReservationRepository reservationRepository;
     private final RestaurantTableRepository tableRepository;
@@ -55,16 +58,9 @@ public class ReservationService {
         List<RestaurantTable> suitableTables =
                 tableRepository.findByCapacityGreaterThanEqual(partySize);
 
-        List<Reservation> existingReservations =
-                reservationRepository.findByReservationDateAndReservationTime(
-                        date,
-                        time
-                );
-
-        List<Integer> reservedTableIds = existingReservations.stream()
-                .map(Reservation::getRestaurantTable)
-                .filter(table -> table != null)
-                .map(RestaurantTable::getId)
+        List<Integer> reservedTableIds = reservationRepository.findByReservationDate(date).stream()
+                .filter(r -> r.getRestaurantTable() != null && isOverlapping(r.getReservationTime(), time))
+                .map(r -> r.getRestaurantTable().getId())
                 .toList();
 
         return suitableTables.stream()
@@ -113,10 +109,8 @@ public class ReservationService {
 
     @Transactional(readOnly = true)
     public ReservationResponse getReservation(Integer id) {
-
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reservation not found."));
-
         return new ReservationResponse(reservation);
     }
 
@@ -125,6 +119,11 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reservation not found."));
         reservationRepository.delete(reservation);
+    }
+
+    private boolean isOverlapping(LocalTime existingTime, LocalTime requestedTime) {
+        if (existingTime == null || requestedTime == null) return false;
+        return Math.abs(Duration.between(existingTime, requestedTime).toMinutes()) < RESERVATION_DURATION_MINUTES;
     }
 
     private void validateRequest(ReservationRequest request) {
@@ -165,15 +164,16 @@ public class ReservationService {
                     "Selected table cannot accommodate " + request.getPartySize() + " guests."
             );
         }
-        boolean alreadyReserved = excludedReservationId == null
-                ? reservationRepository.findByRestaurantTableIdAndReservationDateAndReservationTime(
-                        table.getId(), request.getReservationDate(), request.getReservationTime()).isPresent()
-                : reservationRepository.existsByRestaurantTableIdAndReservationDateAndReservationTimeAndIdNot(
-                        table.getId(), request.getReservationDate(), request.getReservationTime(), excludedReservationId);
+
+        boolean alreadyReserved = reservationRepository.findByReservationDate(request.getReservationDate()).stream()
+                .filter(r -> r.getRestaurantTable() != null && r.getRestaurantTable().getId().equals(table.getId()))
+                .filter(r -> excludedReservationId == null || !r.getId().equals(excludedReservationId))
+                .anyMatch(r -> isOverlapping(r.getReservationTime(), request.getReservationTime()));
+
         if (alreadyReserved) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "This table is already reserved for the selected time."
+                    "This table is already reserved around the selected time."
             );
         }
         return table;
@@ -186,6 +186,11 @@ public class ReservationService {
         reservation.setReservationDate(request.getReservationDate());
         reservation.setReservationTime(request.getReservationTime());
         reservation.setRestaurantTable(table);
+        reservation.setNotes(
+                request.getNotes() != null && !request.getNotes().isBlank()
+                        ? request.getNotes().trim()
+                        : null
+        );
 
         if (request.getUserId() != null) {
             User user = userRepository.findById(request.getUserId())
