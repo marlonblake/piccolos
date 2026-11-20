@@ -10,6 +10,25 @@ const CustomerMenu = () => {
     const [selectedItem, setSelectedItem] = useState(null);
     const [isAdded, setIsAdded] = useState(false);
     const [quantity, setQuantity] = useState(1);
+    const [selectedSize, setSelectedSize] = useState('11"');
+
+    const LARGE_PIZZA_UPCHARGE = 900;
+
+    const isPizzaItem = (item) => {
+        if (!item) return false;
+        const catName = item.category?.name || "";
+        const catId = item.category_id || item.categoryId;
+        return catName.toLowerCase() === "pizza" || catId === 2;
+    };
+
+    const getEffectiveUnitPrice = (item, size = selectedSize) => {
+        if (!item) return 0;
+        const basePrice = Number(item.price) || 0;
+        if (isPizzaItem(item) && size === '14"') {
+            return basePrice + LARGE_PIZZA_UPCHARGE;
+        }
+        return basePrice;
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -66,12 +85,19 @@ const CustomerMenu = () => {
         setSelectedItem(item);
         setIsAdded(false);
         setQuantity(1);
+        setSelectedSize('11"');
     };
 
     const handleAddToCart = (item) => {
         const existingCart = JSON.parse(localStorage.getItem('piccolos_cart')) || [];
         const itemId = item.id || item.menuItemId;
-        const itemIndex = existingCart.findIndex(cartItem => (cartItem.id || cartItem.menuItemId) === itemId);
+        const pizza = isPizzaItem(item);
+        const appliedSize = pizza ? selectedSize : null;
+        const unitPrice = getEffectiveUnitPrice(item, selectedSize);
+
+        const itemIndex = existingCart.findIndex(
+            cartItem => (cartItem.id || cartItem.menuItemId) === itemId && (cartItem.size || null) === appliedSize
+        );
 
         const itemImage = item.imageUrl || item.image_url;
         const itemCategory = item.category?.name || "MENU ITEM";
@@ -81,8 +107,9 @@ const CustomerMenu = () => {
         } else {
             existingCart.push({
                 menuItemId: itemId,
-                name: item.name,
-                price: item.price,
+                name: pizza ? `${item.name} (${selectedSize})` : item.name,
+                price: unitPrice,
+                size: appliedSize,
                 quantity: quantity,
                 imageUrl: itemImage,
                 category: itemCategory
@@ -110,13 +137,13 @@ const CustomerMenu = () => {
             </div>
 
             {/* EDITED: Changed from flex-wrap to a scrollable horizontal line */}
-            <div 
+            <div
                 className="category-scroll-container"
-                style={{ 
-                    display: 'flex', 
-                    gap: '12px', 
-                    marginBottom: '30px', 
-                    overflowX: 'auto', 
+                style={{
+                    display: 'flex',
+                    gap: '12px',
+                    marginBottom: '30px',
+                    overflowX: 'auto',
                     whiteSpace: 'nowrap',
                     paddingBottom: '10px',
                     WebkitOverflowScrolling: 'touch',
@@ -273,9 +300,9 @@ const CustomerMenu = () => {
                         <div style={{ padding: '24px', textAlign: 'center', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '900', color: '#1a1a1a' }}>{item.name}</h3>
                             {/* EDITED: Truncated description using webkit-line-clamp */}
-                            <p style={{ 
-                                margin: 0, 
-                                fontSize: '14px', 
+                            <p style={{
+                                margin: 0,
+                                fontSize: '14px',
                                 color: '#666',
                                 display: '-webkit-box',
                                 WebkitLineClamp: 2,
@@ -374,16 +401,60 @@ const CustomerMenu = () => {
                                 marginBottom: '24px',
                                 boxShadow: '0 4px 10px rgba(245, 158, 11, 0.3)'
                             }}>
-                                LKR {(selectedItem.price * quantity).toLocaleString()}
+                                LKR {(getEffectiveUnitPrice(selectedItem, selectedSize) * quantity).toLocaleString()}
                             </div>
 
                             <hr style={{ borderTop: '1px solid #f0f0f0', width: '100%', margin: '0 0 24px 0' }} />
 
                             <div style={{ fontSize: '13px', color: '#1a1a1a', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px' }}>Description</div>
                             {/* Keep full description in modal view */}
-                            <p style={{ color: '#666', lineHeight: '1.6', margin: '0 0 auto 0', fontSize: '15px' }}>
+                            <p style={{ color: '#666', lineHeight: '1.6', margin: '0 0 20px 0', fontSize: '15px' }}>
                                 {selectedItem.description || "A delicious selection prepared fresh daily."}
                             </p>
+
+                            {isPizzaItem(selectedItem) && (
+                                <div style={{ marginBottom: '20px' }}>
+                                    <div style={{ fontSize: '13px', color: '#1a1a1a', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px' }}>
+                                        Choose Size
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        {[
+                                            { id: '11"', label: 'Medium 11"', price: Number(selectedItem.price) || 0 },
+                                            { id: '14"', label: 'Large 14"', price: (Number(selectedItem.price) || 0) + LARGE_PIZZA_UPCHARGE }
+                                        ].map((option) => {
+                                            const active = selectedSize === option.id;
+                                            return (
+                                                <button
+                                                    key={option.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedSize(option.id);
+                                                        setIsAdded(false);
+                                                    }}
+                                                    style={{
+                                                        width: '100%',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        padding: '12px 16px',
+                                                        borderRadius: '12px',
+                                                        border: active ? '2px solid #8e2420' : '1px solid #e0e0e0',
+                                                        backgroundColor: active ? '#FFF5F5' : '#f8f9fa',
+                                                        color: '#1a1a1a',
+                                                        fontWeight: active ? '800' : '600',
+                                                        fontSize: '14px',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.15s ease'
+                                                    }}
+                                                >
+                                                    <span>{option.label}</span>
+                                                    <span>LKR {option.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
 
                             <div style={{ marginTop: 'auto' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
