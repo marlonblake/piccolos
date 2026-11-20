@@ -29,6 +29,12 @@ public class MenuItem {
     @Column(nullable = false)
     private BigDecimal price;
 
+    @Column(name = "price_11")
+    private BigDecimal price11;
+
+    @Column(name = "price_14")
+    private BigDecimal price14;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
@@ -68,6 +74,22 @@ public class MenuItem {
 
     public void setPrice(BigDecimal price) {
         this.price = price;
+    }
+
+    public BigDecimal getPrice11() {
+        return price11;
+    }
+
+    public void setPrice11(BigDecimal price11) {
+        this.price11 = price11;
+    }
+
+    public BigDecimal getPrice14() {
+        return price14;
+    }
+
+    public void setPrice14(BigDecimal price14) {
+        this.price14 = price14;
     }
 
     public Category getCategory() {

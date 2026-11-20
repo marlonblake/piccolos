@@ -19,14 +19,14 @@ const ShoppingCart = () => {
 
     const increaseQuantity = (index) => {
         const newCart = [...cartItems];
-        newCart[index].quantity += 1;
+        newCart[index] = { ...newCart[index], quantity: newCart[index].quantity + 1 };
         updateCartState(newCart);
     };
 
     const decreaseQuantity = (index) => {
         const newCart = [...cartItems];
         if (newCart[index].quantity > 1) {
-            newCart[index].quantity -= 1;
+            newCart[index] = { ...newCart[index], quantity: newCart[index].quantity - 1 };
         } else {
             newCart.splice(index, 1);
         }
@@ -48,7 +48,14 @@ const ShoppingCart = () => {
     };
 
     const calculateTotal = () => {
-        return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0).toFixed(2);
+        return cartItems.reduce((total, item) => total + (Number(item.price) * item.quantity), 0).toFixed(2);
+    };
+
+    const formatSizeLabel = (size) => {
+        if (!size) return null;
+        const cleaned = String(size).replace(/"/g, '').trim();
+        if (!cleaned) return null;
+        return `${cleaned}"`;
     };
 
     const handleInitiateCheckout = () => {
@@ -75,7 +82,8 @@ const ShoppingCart = () => {
             items: cartItems.map(item => ({
                 menuItemId: item.menuItemId || item.id,
                 quantity: item.quantity,
-                price: item.price
+                size: item.size || null,
+                price: Number(item.price)
             }))
         };
 
@@ -151,51 +159,64 @@ const ShoppingCart = () => {
             ) : (
                 <>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-                        {cartItems.map((item, index) => (
-                            <div key={item.menuItemId || index} style={{
-                                backgroundColor: '#fff', borderRadius: '20px', padding: '20px', boxShadow: '0 8px 24px rgba(0,0,0,0.04)',
-                                border: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px'
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: '1 1 300px' }}>
-                                    <div style={{
-                                        width: '80px', height: '80px', backgroundColor: '#f8f9fa', borderRadius: '16px', overflow: 'hidden',
-                                        display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0
-                                    }}>
-                                        {item.imageUrl ? (
-                                            <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        ) : (
-                                            <span style={{ fontSize: '12px', color: '#ccc', fontWeight: 'bold' }}>NO IMG</span>
-                                        )}
+                        {cartItems.map((item, index) => {
+                            const sizeLabel = formatSizeLabel(item.size);
+                            return (
+                                <div key={`${item.menuItemId || item.id}-${item.size || 'default'}-${index}`} style={{
+                                    backgroundColor: '#fff', borderRadius: '20px', padding: '20px', boxShadow: '0 8px 24px rgba(0,0,0,0.04)',
+                                    border: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: '1 1 300px' }}>
+                                        <div style={{
+                                            width: '80px', height: '80px', backgroundColor: '#f8f9fa', borderRadius: '16px', overflow: 'hidden',
+                                            display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0
+                                        }}>
+                                            {item.imageUrl ? (
+                                                <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : (
+                                                <span style={{ fontSize: '12px', color: '#ccc', fontWeight: 'bold' }}>NO IMG</span>
+                                            )}
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                <span style={{ fontSize: '18px', fontWeight: '900', color: '#1a1a1a' }}>{item.name}</span>
+                                                {sizeLabel && (
+                                                    <span style={{
+                                                        fontSize: '12px', fontWeight: '800', color: '#8e2420',
+                                                        backgroundColor: '#fdecec', padding: '2px 8px', borderRadius: '8px'
+                                                    }}>
+                                                        {sizeLabel}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span style={{ fontSize: '13px', color: '#888', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '1px' }}>{item.category || 'MENU ITEM'}</span>
+                                            <span style={{ fontSize: '16px', fontWeight: '900', color: '#F59E0B', marginTop: '4px' }}>LKR {Number(item.price).toLocaleString()}</span>
+                                        </div>
                                     </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                        <span style={{ fontSize: '18px', fontWeight: '900', color: '#1a1a1a' }}>{item.name}</span>
-                                        <span style={{ fontSize: '13px', color: '#888', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '1px' }}>{item.category || 'MENU ITEM'}</span>
-                                        <span style={{ fontSize: '16px', fontWeight: '900', color: '#F59E0B', marginTop: '4px' }}>LKR {item.price.toLocaleString()}</span>
-                                    </div>
-                                </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                        <button onClick={() => decreaseQuantity(index)} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e0e0e0', backgroundColor: '#fff', color: '#8e2420', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>-</button>
-                                        <span style={{ fontWeight: '900', fontSize: '16px', minWidth: '20px', textAlign: 'center', color: '#1a1a1a' }}>{item.quantity}</span>
-                                        <button onClick={() => increaseQuantity(index)} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e0e0e0', backgroundColor: '#fff', color: '#8e2420', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>+</button>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                            <button onClick={() => decreaseQuantity(index)} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e0e0e0', backgroundColor: '#fff', color: '#8e2420', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>-</button>
+                                            <span style={{ fontWeight: '900', fontSize: '16px', minWidth: '20px', textAlign: 'center', color: '#1a1a1a' }}>{item.quantity}</span>
+                                            <button onClick={() => increaseQuantity(index)} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e0e0e0', backgroundColor: '#fff', color: '#8e2420', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>+</button>
+                                        </div>
+                                        <button
+                                            onClick={() => deleteItem(index)}
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.2s' }}
+                                            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                                            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                        >
+                                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                <line x1="10" y1="11" x2="10" y2="17"></line>
+                                                <line x1="14" y1="11" x2="14" y2="17"></line>
+                                            </svg>
+                                        </button>
                                     </div>
-                                    <button
-                                        onClick={() => deleteItem(index)}
-                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.2s' }}
-                                        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-                                        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                                    >
-                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                            <polyline points="3 6 5 6 21 6"></polyline>
-                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                            <line x1="10" y1="11" x2="10" y2="17"></line>
-                                            <line x1="14" y1="11" x2="14" y2="17"></line>
-                                        </svg>
-                                    </button>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     <div style={{ marginBottom: '30px' }}>
@@ -234,24 +255,24 @@ const ShoppingCart = () => {
                     <div style={{ backgroundColor: '#fff', padding: '30px', borderRadius: '20px', maxWidth: '400px', width: '100%', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', textAlign: 'center' }}>
                         <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#1a1a1a', margin: '0 0 10px 0' }}>How would you like to checkout?</h3>
                         <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px', lineHeight: '1.5' }}>Log in to track your orders and save your details for next time.</p>
-                        
+
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <Link 
-                                to="/login" 
+                            <Link
+                                to="/login"
                                 style={{ display: 'block', width: '100%', backgroundColor: '#1a1a1a', color: '#fff', padding: '14px', borderRadius: '12px', textDecoration: 'none', fontWeight: 'bold', fontSize: '15px' }}
                             >
                                 Log In / Register
                             </Link>
-                            
-                            <button 
+
+                            <button
                                 onClick={() => processOrder(null)}
                                 style={{ width: '100%', backgroundColor: '#fff', border: '2px solid #f0f0f0', color: '#666', padding: '14px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', fontSize: '15px' }}
                             >
                                 Continue as Guest
                             </button>
                         </div>
-                        
-                        <button 
+
+                        <button
                             onClick={() => setShowAuthPrompt(false)}
                             style={{ width: '100%', marginTop: '20px', background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}
                         >
@@ -275,5 +296,4 @@ const ShoppingCart = () => {
         </div>
     );
 };
-
 export default ShoppingCart;
