@@ -11,61 +11,30 @@ public class ReservationRequest {
     private Integer partySize;
     private LocalDate reservationDate;
     private LocalTime reservationTime;
+    private String notes;
     private Integer userId;
 
-    public String getGuestName() {
-        return guestName;
-    }
+    public String getGuestName() { return guestName; }
+    public void setGuestName(String guestName) { this.guestName = guestName; }
 
-    public void setGuestName(String guestName) {
-        this.guestName = guestName;
-    }
+    public String getGuestPhone() { return guestPhone; }
+    public void setGuestPhone(String guestPhone) { this.guestPhone = guestPhone; }
 
-    public String getGuestPhone() {
-        return guestPhone;
-    }
+    public Integer getTableId() { return tableId; }
+    public void setTableId(Integer tableId) { this.tableId = tableId; }
 
-    public void setGuestPhone(String guestPhone) {
-        this.guestPhone = guestPhone;
-    }
+    public Integer getPartySize() { return partySize; }
+    public void setPartySize(Integer partySize) { this.partySize = partySize; }
 
-    public Integer getTableId() {
-        return tableId;
-    }
+    public LocalDate getReservationDate() { return reservationDate; }
+    public void setReservationDate(LocalDate reservationDate) { this.reservationDate = reservationDate; }
 
-    public void setTableId(Integer tableId) {
-        this.tableId = tableId;
-    }
+    public LocalTime getReservationTime() { return reservationTime; }
+    public void setReservationTime(LocalTime reservationTime) { this.reservationTime = reservationTime; }
 
-    public Integer getPartySize() {
-        return partySize;
-    }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 
-    public void setPartySize(Integer partySize) {
-        this.partySize = partySize;
-    }
-
-    public LocalDate getReservationDate() {
-        return reservationDate;
-    }
-
-    public void setReservationDate(LocalDate reservationDate) {
-        this.reservationDate = reservationDate;
-    }
-
-    public LocalTime getReservationTime() {
-        return reservationTime;
-    }
-
-    public void setReservationTime(LocalTime reservationTime) {
-        this.reservationTime = reservationTime;
-    }
-
-    public Integer getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Integer userId) {
-        this.userId = userId;
-    }
+    public Integer getUserId() { return userId; }
+    public void setUserId(Integer userId) { this.userId = userId; }
 }

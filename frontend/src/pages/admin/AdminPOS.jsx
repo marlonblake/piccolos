@@ -4,14 +4,20 @@ import {
     ArrowLeft, ShoppingBag, Utensils, Plus, Trash2, X, Receipt, Volume2, VolumeX
 } from "lucide-react";
 
-const API = "http://localhost:8081/api";
+const API = `${import.meta.env.VITE_API_BASE_URL}/api`;
 const TABLE_COUNT = 10; // change this to match the restaurant
 const POLL_MS = 5000;
 
 const money = (v) =>
     `Rs. ${Number(v ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-/* ---------- API helper ---------- */
+const todayISO = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+};
 
 async function request(path, options = {}) {
     const { auth = true, ...fetchOptions } = options;
@@ -35,7 +41,7 @@ async function request(path, options = {}) {
             const body = await response.json();
             if (body.message) message = body.message;
         } catch {
-            /* the server sent no JSON body */
+            // no JSON body
         }
         throw new Error(message);
     }
@@ -45,6 +51,8 @@ async function request(path, options = {}) {
 const api = {
     kitchen: (type) => request(`/admin/orders/kitchen${type ? `?type=${type}` : ""}`),
     setStatus: (id, status) => request(`/admin/orders/${id}/status?status=${status}`, { method: "PUT" }),
+    tables: () => request("/admin/tables"),
+    reservationsByDate: (date) => request(`/admin/reservations?date=${date}`),
     openTicket: (tableId) => request(`/admin/tickets?tableId=${tableId}`, { method: "POST" }),
     openTickets: (tableId) => request(`/admin/tables/${tableId}/tickets`),
     addItem: (orderId, menuItemId, quantity) =>
@@ -58,8 +66,6 @@ const api = {
     pay: (invoiceId, method) => request(`/admin/invoices/${invoiceId}/pay?method=${method}`, { method: "PATCH" }),
     menu: () => request("/menu", { auth: false })
 };
-
-/* ---------- small helpers ---------- */
 
 const COLUMNS = [
     { status: "PENDING", title: "New" },
@@ -96,7 +102,7 @@ function beep() {
         osc.start();
         osc.stop(ctx.currentTime + 0.15);
     } catch {
-        /* the sound alert is optional */
+        // sound alert is optional
     }
 }
 
@@ -113,8 +119,6 @@ function ErrorBanner({ message }) {
         </div>
     );
 }
-
-/* ---------- Kitchen board ---------- */
 
 function OrderCard({ order, fresh, onMove, onInvoice }) {
     const status = (order.status || "").toUpperCase();
@@ -320,8 +324,6 @@ function KitchenBoard() {
     );
 }
 
-/* ---------- Dine-in tables ---------- */
-
 function InvoiceModal({ invoice, onClose, onPaid }) {
     const [error, setError] = useState("");
     const [working, setWorking] = useState(false);
@@ -422,7 +424,7 @@ function InvoiceModal({ invoice, onClose, onPaid }) {
     );
 }
 
-function TicketPanel({ tableId, bill, onInvoice, onChanged }) {
+function TicketPanel({ tableId, tableNumber, reservations = [], bill, onInvoice, onChanged }) {
     const [ticket, setTicket] = useState(null);
     const [loaded, setLoaded] = useState(false);
     const [menu, setMenu] = useState([]);
@@ -491,11 +493,28 @@ function TicketPanel({ tableId, bill, onInvoice, onChanged }) {
     const panel = "bg-white rounded-2xl shadow-sm border border-gray-100 p-6";
     const inputClass =
         "px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#D45D3C] focus:ring-1 focus:ring-[#D45D3C] transition-all";
+    const title = `Table ${tableNumber ?? tableId}`;
+
+    const reservationBox = reservations.length > 0 && (
+        <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
+            <p className="font-bold uppercase tracking-wider">Today&apos;s Reservations</p>
+            {reservations.map((r) => {
+                const time = (r.reservationTime || r.time || "").slice(0, 5);
+                const name = r.guestName || r.customerName || "Registered Guest";
+                return (
+                    <p key={r.id}>
+                        {time} — {name} {r.partySize ? `(${r.partySize} guests)` : ""}
+                    </p>
+                );
+            })}
+        </div>
+    );
 
     if (bill) {
         return (
             <div className={panel}>
-                <h2 className="font-serif text-xl font-bold text-[#2C3E2D] mb-2">Table {tableId}</h2>
+                <h2 className="font-serif text-xl font-bold text-[#2C3E2D] mb-2">{title}</h2>
+                {reservationBox}
                 <p className="text-sm text-[#2C3E2D]/60 mb-4">
                     The bill has been issued: <span className="font-bold text-[#D45D3C]">{money(bill.totalAmount)}</span>
                 </p>
@@ -519,7 +538,8 @@ function TicketPanel({ tableId, bill, onInvoice, onChanged }) {
 
     return (
         <div className={panel}>
-            <h2 className="font-serif text-xl font-bold text-[#2C3E2D] mb-4">Table {tableId}</h2>
+            <h2 className="font-serif text-xl font-bold text-[#2C3E2D] mb-4">{title}</h2>
+            {reservationBox}
             <ErrorBanner message={error} />
 
             {!ticket ? (
@@ -607,9 +627,12 @@ function TicketPanel({ tableId, bill, onInvoice, onChanged }) {
 }
 
 function TablesPanel() {
+    const [tables, setTables] = useState([]);
+    const [reservationsByTable, setReservationsByTable] = useState({});
     const [selected, setSelected] = useState(null);
     const [busy, setBusy] = useState(new Set());
     const [invoice, setInvoice] = useState(null);
+    const [error, setError] = useState("");
     const [bills, setBills] = useState(() => {
         try {
             return JSON.parse(localStorage.getItem("pendingInvoices")) || {};
@@ -622,25 +645,42 @@ function TablesPanel() {
         localStorage.setItem("pendingInvoices", JSON.stringify(bills));
     }, [bills]);
 
-    const refreshOccupied = useCallback(async () => {
+    const refreshData = useCallback(async () => {
         try {
-            const data = await api.kitchen("DINE_IN");
-            setBusy(new Set(data.map((o) => o.tableId)));
-        } catch {
-            /* the ticket panel shows the errors */
+            const [tableData, resData, dineInOrders] = await Promise.all([
+                api.tables(),
+                api.reservationsByDate(todayISO()),
+                api.kitchen("DINE_IN")
+            ]);
+
+            setTables(Array.isArray(tableData) ? tableData : []);
+            setBusy(new Set((dineInOrders || []).map((o) => o.tableId)));
+
+            const grouped = {};
+            for (const r of resData || []) {
+                const tId = r.tableId ?? r.restaurantTableId ?? r.table?.id;
+                if (tId != null) {
+                    if (!grouped[tId]) grouped[tId] = [];
+                    grouped[tId].push(r);
+                }
+            }
+            setReservationsByTable(grouped);
+            setError("");
+        } catch (e) {
+            setError(e.message);
         }
     }, []);
 
     useEffect(() => {
-        refreshOccupied();
-        const timer = setInterval(refreshOccupied, POLL_MS);
+        refreshData();
+        const timer = setInterval(refreshData, POLL_MS);
         return () => clearInterval(timer);
-    }, [refreshOccupied]);
+    }, [refreshData]);
 
     const issued = (inv) => {
         setBills((b) => ({ ...b, [inv.tableId]: inv }));
         setInvoice(inv);
-        refreshOccupied();
+        refreshData();
     };
 
     const paid = (inv) => {
@@ -651,7 +691,7 @@ function TablesPanel() {
         });
         setInvoice(null);
         setSelected(null);
-        refreshOccupied();
+        refreshData();
     };
 
     const tileClass = (state, isSelected) => {
@@ -661,48 +701,76 @@ function TablesPanel() {
                 ? "bg-green-50 border-green-200 text-green-800"
                 : state === "busy"
                     ? "bg-[#D45D3C]/10 border-[#D45D3C]/40 text-[#D45D3C]"
-                    : "bg-white border-gray-200 text-[#2C3E2D]";
+                    : state === "reserved"
+                        ? "bg-amber-50 border-amber-300 text-amber-800"
+                        : "bg-white border-gray-200 text-[#2C3E2D]";
         return `${base} ${colour} ${isSelected ? "ring-2 ring-[#2C3E2D]" : ""}`;
     };
 
+    const selectedTable = tables.find((t) => t.id === selected);
+
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 content-start">
-                {Array.from({ length: TABLE_COUNT }, (_, i) => i + 1).map((n) => {
-                    const state = bills[n] ? "billed" : busy.has(n) ? "busy" : "free";
-                    const label = state === "billed" ? "Bill issued" : state === "busy" ? "Occupied" : "Free";
-                    return (
-                        <button key={n} onClick={() => setSelected(n)} className={tileClass(state, selected === n)}>
-                            <span className="font-serif text-3xl font-bold">{n}</span>
-                            <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
-                        </button>
-                    );
-                })}
-            </div>
+        <div>
+            <ErrorBanner message={error} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 content-start">
+                    {tables.map((t) => {
+                        const tableRes = reservationsByTable[t.id] || [];
+                        const firstTime = (tableRes[0]?.reservationTime || tableRes[0]?.time || "").slice(0, 5);
+                        const state = bills[t.id]
+                            ? "billed"
+                            : busy.has(t.id)
+                                ? "busy"
+                                : tableRes.length > 0
+                                    ? "reserved"
+                                    : "free";
+                        const label =
+                            state === "billed"
+                                ? "Bill issued"
+                                : state === "busy"
+                                    ? "Occupied"
+                                    : state === "reserved"
+                                        ? `Reserved${firstTime ? ` (${firstTime})` : ""}`
+                                        : "Free";
 
-            <div>
-                {selected ? (
-                    <TicketPanel
-                        key={selected}
-                        tableId={selected}
-                        bill={bills[selected]}
-                        onInvoice={issued}
-                        onChanged={refreshOccupied}
-                    />
-                ) : (
-                    <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 border-dashed">
-                        <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-500 font-medium">Select a table to open or edit its ticket.</p>
-                    </div>
-                )}
-            </div>
+                        return (
+                            <button
+                                key={t.id}
+                                onClick={() => setSelected(t.id)}
+                                className={tileClass(state, selected === t.id)}
+                            >
+                                <span className="font-serif text-3xl font-bold">{t.tableNumber ?? t.id}</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
+                                {t.capacity && <span className="text-[11px] opacity-60">{t.capacity} seats</span>}
+                            </button>
+                        );
+                    })}
+                </div>
 
-            {invoice && <InvoiceModal invoice={invoice} onClose={() => setInvoice(null)} onPaid={paid} />}
+                <div>
+                    {selectedTable ? (
+                        <TicketPanel
+                            key={selectedTable.id}
+                            tableId={selectedTable.id}
+                            tableNumber={selectedTable.tableNumber ?? selectedTable.id}
+                            reservations={reservationsByTable[selectedTable.id] || []}
+                            bill={bills[selectedTable.id]}
+                            onInvoice={issued}
+                            onChanged={refreshData}
+                        />
+                    ) : (
+                        <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 border-dashed">
+                            <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                            <p className="text-gray-500 font-medium">Select a table to open or edit its ticket.</p>
+                        </div>
+                    )}
+                </div>
+
+                {invoice && <InvoiceModal invoice={invoice} onClose={() => setInvoice(null)} onPaid={paid} />}
+            </div>
         </div>
     );
 }
-
-/* ---------- Page ---------- */
 
 export default function AdminPOS() {
     const [tab, setTab] = useState("kitchen");
@@ -745,4 +813,3 @@ export default function AdminPOS() {
         </div>
     );
 }
-

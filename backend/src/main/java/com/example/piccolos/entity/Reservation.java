@@ -1,4 +1,4 @@
-package com.example.piccolos.entity; 
+package com.example.piccolos.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
@@ -27,17 +27,17 @@ public class Reservation {
     @Column(name = "party_size")
     private Integer partySize;
 
-    //Links to the RestaurantTable entity
+    @Column(name = "notes", length = 500)
+    private String notes;
+
     @ManyToOne
     @JoinColumn(name = "table_id")
     private RestaurantTable restaurantTable;
 
-    //Links to the User entity
-    @ManyToOne 
+    @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
 
-    // --- Getters and Setters ---
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
@@ -56,10 +56,12 @@ public class Reservation {
     public Integer getPartySize() { return partySize; }
     public void setPartySize(Integer partySize) { this.partySize = partySize; }
 
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
+
     public RestaurantTable getRestaurantTable() { return restaurantTable; }
     public void setRestaurantTable(RestaurantTable restaurantTable) { this.restaurantTable = restaurantTable; }
 
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
-    
 }
