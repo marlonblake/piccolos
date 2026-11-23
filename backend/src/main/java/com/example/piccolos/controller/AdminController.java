@@ -107,6 +107,14 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/reservations/{id}/status")
+    public ResponseEntity<ReservationResponse> updateReservationStatus(
+            @PathVariable Integer id,
+            @RequestParam String status
+    ) {
+        return ResponseEntity.ok(reservationService.updateStatus(id, status));
+    }
+
     @GetMapping("/full-stats")
     public ResponseEntity<Map<String, Object>> getFullDashboardStats() {
         Map<String, Object> response = new HashMap<>();

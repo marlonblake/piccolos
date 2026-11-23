@@ -1,115 +1,114 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
-    ArrowLeft, ShoppingBag, Utensils, Plus, Trash2, X, Receipt, Volume2, VolumeX
+    ArrowLeft,
+    ShoppingBag,
+    Utensils,
+    Plus,
+    Trash2,
+    X,
+    Receipt,
+    Volume2,
+    VolumeX,
+    CalendarClock,
+    Bell,
+    Phone,
+    Users,
+    CheckCircle2
 } from "lucide-react";
+import {
+    api,
+    AuthError,
+    asList,
+    COLUMNS,
+    FILTERS,
+    isoDate,
+    money,
+    NEXT,
+    norm,
+    pillClass,
+    resDate,
+    resId,
+    resStatus,
+    resTime,
+    store
+} from "./posApi";
+import {
+    isAudioUnlocked,
+    Modal,
+    playAlert,
+    unlockAudio,
+    useBusy,
+    useConfirm,
+    useLater,
+    usePolling
+} from "./posUi";
 
-const API = `${import.meta.env.VITE_API_BASE_URL}/api`;
-const TABLE_COUNT = 10; // change this to match the restaurant
-const POLL_MS = 5000;
+const TERMINAL = ["COMPLETED", "CANCELLED"];
 
-const money = (v) =>
-    `Rs. ${Number(v ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-const todayISO = () => {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
-};
-
-async function request(path, options = {}) {
-    const { auth = true, ...fetchOptions } = options;
-    const token = localStorage.getItem("adminToken");
-
-    const response = await fetch(`${API}${path}`, {
-        ...fetchOptions,
-        headers: {
-            "Content-Type": "application/json",
-            ...(auth && token ? { Authorization: `Bearer ${token}` } : {}),
-            ...fetchOptions.headers
-        }
-    });
-
-    if (response.status === 401 || response.status === 403) {
-        throw new Error("Not authorised. Please log in as an admin again.");
-    }
-    if (!response.ok) {
-        let message = `Request failed (${response.status})`;
-        try {
-            const body = await response.json();
-            if (body.message) message = body.message;
-        } catch {
-            // no JSON body
-        }
-        throw new Error(message);
-    }
-    return response.status === 204 ? null : response.json();
+function UnreadBadge({ count }) {
+    if (!count || count <= 0) return null;
+    return (
+        <span
+            aria-label={`${count} pending`}
+            className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-600 text-white text-[11px] font-bold leading-none"
+        >
+            {count > 99 ? "99+" : count}
+        </span>
+    );
 }
 
-const api = {
-    kitchen: (type) => request(`/admin/orders/kitchen${type ? `?type=${type}` : ""}`),
-    setStatus: (id, status) => request(`/admin/orders/${id}/status?status=${status}`, { method: "PUT" }),
-    tables: () => request("/admin/tables"),
-    reservationsByDate: (date) => request(`/admin/reservations?date=${date}`),
-    openTicket: (tableId) => request(`/admin/tickets?tableId=${tableId}`, { method: "POST" }),
-    openTickets: (tableId) => request(`/admin/tables/${tableId}/tickets`),
-    addItem: (orderId, menuItemId, quantity) =>
-        request(`/admin/tickets/${orderId}/items`, {
-            method: "POST",
-            body: JSON.stringify({ menuItemId, quantity })
-        }),
-    removeItem: (orderId, itemId) => request(`/admin/tickets/${orderId}/items/${itemId}`, { method: "DELETE" }),
-    invoice: (tableId) => request(`/admin/tables/${tableId}/invoice`, { method: "POST" }),
-    orderInvoice: (orderId) => request(`/admin/orders/${orderId}/invoice`, { method: "POST" }),
-    pay: (invoiceId, method) => request(`/admin/invoices/${invoiceId}/pay?method=${method}`, { method: "PATCH" }),
-    menu: () => request("/menu", { auth: false })
-};
-
-const COLUMNS = [
-    { status: "PENDING", title: "New" },
-    { status: "PREPARING", title: "Preparing" },
-    { status: "READY", title: "Ready" }
-];
-
-const NEXT = {
-    PENDING: { to: "PREPARING", label: "Start preparing" },
-    PREPARING: { to: "READY", label: "Mark ready" },
-    READY: { to: "COMPLETED", label: "Complete order" }
-};
-
-const FILTERS = [
-    ["", "All"],
-    ["PICKUP", "Pickup"],
-    ["DINE_IN", "Dine-in"]
-];
-
-const pillClass = (active) =>
-    `px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-        active
-            ? "bg-[#2C3E2D] text-white shadow-md"
-            : "bg-gray-50 text-[#2C3E2D] hover:bg-gray-100 border border-gray-200"
-    }`;
-
-function beep() {
-    try {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        const ctx = new Ctx();
-        const osc = ctx.createOscillator();
-        osc.frequency.value = 880;
-        osc.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.15);
-    } catch {
-        // sound alert is optional
-    }
+function ToastStack({ toasts, onDismiss, onOpen }) {
+    return (
+        <div
+            role="status"
+            aria-live="polite"
+            className="fixed top-24 right-4 z-50 flex flex-col gap-3 w-80 max-w-[calc(100vw-2rem)]"
+        >
+            {toasts.map((t) => {
+                const isRes = t.kind === "reservation";
+                return (
+                    <div
+                        key={t.id}
+                        className={`bg-white rounded-2xl shadow-xl border-l-4 p-4 flex items-start gap-3 ${
+                            isRes ? "border-amber-500" : "border-[#D45D3C]"
+                        }`}
+                    >
+                        <div
+                            className={`p-2 rounded-xl shrink-0 ${
+                                isRes ? "bg-amber-100 text-amber-700" : "bg-[#D45D3C]/10 text-[#D45D3C]"
+                            }`}
+                        >
+                            {isRes ? <CalendarClock className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-[#2C3E2D]">{t.title}</p>
+                            <p className="text-xs text-[#2C3E2D]/70 mt-0.5">{t.subtitle}</p>
+                            <button
+                                onClick={() => onOpen(t)}
+                                className="mt-2 text-xs font-bold text-[#D45D3C] hover:underline"
+                            >
+                                View now →
+                            </button>
+                        </div>
+                        <button
+                            onClick={() => onDismiss(t.id)}
+                            className="text-gray-400 hover:text-gray-600"
+                            aria-label="Dismiss notification"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                );
+            })}
+        </div>
+    );
 }
 
 function ErrorBanner({ message }) {
     if (!message) return null;
     return (
-        <div className="mb-6 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">
+        <div role="alert" className="mb-6 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">
             {message}{" "}
             {message.startsWith("Not authorised") && (
                 <Link to="/admin" className="font-semibold underline">
@@ -120,17 +119,15 @@ function ErrorBanner({ message }) {
     );
 }
 
-function OrderCard({ order, fresh, onMove, onInvoice }) {
-    const status = (order.status || "").toUpperCase();
-    const dineIn = (order.orderType || "").toUpperCase() === "DINE_IN";
+function OrderCard({ order, fresh, busy, onSeen, onMove, onInvoice, onOpenTable }) {
+    const status = norm(order.status);
+    const dineIn = norm(order.orderType) === "DINE_IN";
     const next = NEXT[status];
-
-    const cancel = () => {
-        if (window.confirm(`Cancel order #${order.id}?`)) onMove(order, "CANCELLED");
-    };
 
     return (
         <div
+            onPointerEnter={() => fresh && onSeen(order.id)}
+            onFocus={() => fresh && onSeen(order.id)}
             className={`bg-white rounded-2xl shadow-sm border p-5 transition-all ${
                 fresh ? "border-[#D45D3C] ring-2 ring-[#D45D3C]/40 animate-pulse" : "border-gray-100"
             }`}
@@ -146,12 +143,10 @@ function OrderCard({ order, fresh, onMove, onInvoice }) {
                 </span>
             </div>
 
-            {!dineIn && order.guestName && (
-                <p className="text-sm text-[#2C3E2D]/60 mb-2">For {order.guestName}</p>
-            )}
+            {!dineIn && order.guestName && <p className="text-sm text-[#2C3E2D]/60 mb-2">For {order.guestName}</p>}
 
             <ul className="text-sm text-[#2C3E2D] divide-y divide-gray-50 mb-3">
-                {order.items.map((item) => (
+                {(order.items || []).map((item) => (
                     <li key={item.id} className="py-1.5">
                         {item.quantity} × {item.name}
                     </li>
@@ -164,14 +159,23 @@ function OrderCard({ order, fresh, onMove, onInvoice }) {
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
                 {status === "READY" && dineIn ? (
-                    <span className="text-xs font-semibold uppercase tracking-widest text-[#2C3E2D]/60">
-                        Waiting for payment
-                    </span>
+                    <>
+                        <span className="text-xs font-semibold uppercase tracking-widest text-[#2C3E2D]/60">
+                            Waiting for payment
+                        </span>
+                        <button
+                            onClick={() => onOpenTable(order.tableId)}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[#D45D3C] border border-[#D45D3C]/40 hover:bg-[#D45D3C]/5 transition-all"
+                        >
+                            Open table
+                        </button>
+                    </>
                 ) : (
                     next && (
                         <button
+                            disabled={busy}
                             onClick={() => onMove(order, next.to)}
-                            className="bg-[#2C3E2D] hover:bg-[#1A251B] text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-md"
+                            className="bg-[#2C3E2D] hover:bg-[#1A251B] text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-md disabled:opacity-50"
                         >
                             {next.label}
                         </button>
@@ -179,16 +183,18 @@ function OrderCard({ order, fresh, onMove, onInvoice }) {
                 )}
                 {status === "READY" && !dineIn && (
                     <button
+                        disabled={busy}
                         onClick={() => onInvoice(order)}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-[#D45D3C] border border-[#D45D3C]/40 hover:bg-[#D45D3C]/5 transition-all"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-[#D45D3C] border border-[#D45D3C]/40 hover:bg-[#D45D3C]/5 transition-all disabled:opacity-50"
                     >
                         <Receipt className="w-4 h-4" /> Invoice
                     </button>
                 )}
                 {(status === "PENDING" || status === "PREPARING") && (
                     <button
-                        onClick={cancel}
-                        className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 border border-gray-200 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        disabled={busy}
+                        onClick={() => onMove(order, "CANCELLED")}
+                        className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 border border-gray-200 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
                     >
                         Cancel
                     </button>
@@ -198,96 +204,61 @@ function OrderCard({ order, fresh, onMove, onInvoice }) {
     );
 }
 
-function KitchenBoard() {
-    const [orders, setOrders] = useState([]);
+function KitchenBoard({ orders, freshOrders, onSeen, onRefresh, confirm, onOpenTable }) {
     const [filter, setFilter] = useState("");
     const [error, setError] = useState("");
-    const [fresh, setFresh] = useState(new Set());
-    const [sound, setSound] = useState(true);
     const [invoice, setInvoice] = useState(null);
-    const seen = useRef(null);
-    const soundRef = useRef(sound);
-    soundRef.current = sound;
+    const busy = useBusy();
 
-    const load = useCallback(async () => {
-        try {
-            const data = await api.kitchen(filter);
-            setOrders(data);
-            setError("");
-            if (seen.current) {
-                const added = data.filter((o) => !seen.current.has(o.id)).map((o) => o.id);
-                if (added.length > 0) {
-                    setFresh((prev) => new Set([...prev, ...added]));
-                    if (soundRef.current) beep();
-                    setTimeout(() => {
-                        setFresh((prev) => {
-                            const copy = new Set(prev);
-                            added.forEach((id) => copy.delete(id));
-                            return copy;
-                        });
-                    }, 6000);
-                }
+    const visibleOrders = filter ? orders.filter((o) => norm(o.orderType) === filter) : orders;
+
+    const move = (order, status) =>
+        busy.run(`order-${order.id}`, async () => {
+            if (status === "CANCELLED" && !(await confirm(`Cancel order #${order.id}?`))) return;
+            try {
+                await api.setStatus(order.id, status);
+                setError("");
+                await onRefresh();
+            } catch (e) {
+                setError(e.message);
             }
-            seen.current = new Set(data.map((o) => o.id));
-        } catch (e) {
-            setError(e.message);
-        }
-    }, [filter]);
+        });
 
-    useEffect(() => {
-        seen.current = null;
-        load();
-        const timer = setInterval(load, POLL_MS);
-        return () => clearInterval(timer);
-    }, [load]);
-
-    const move = async (order, status) => {
-        try {
-            await api.setStatus(order.id, status);
-            load();
-        } catch (e) {
-            setError(e.message);
-        }
-    };
-
-    const openInvoice = async (order) => {
-        try {
-            setInvoice(await api.orderInvoice(order.id));
-            setError("");
-        } catch (e) {
-            setError(e.message);
-        }
-    };
+    const openInvoice = (order) =>
+        busy.run(`order-${order.id}`, async () => {
+            try {
+                setInvoice(await api.orderInvoice(order.id));
+                setError("");
+            } catch (e) {
+                setError(e.message);
+            }
+        });
 
     const paid = () => {
         setInvoice(null);
-        load();
+        onRefresh();
     };
 
     return (
         <div>
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-8 flex flex-col sm:flex-row gap-4 justify-between items-center">
-                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                    {FILTERS.map(([value, label]) => (
-                        <button key={label} onClick={() => setFilter(value)} className={pillClass(filter === value)}>
-                            {label}
-                        </button>
-                    ))}
-                </div>
-                <button
-                    onClick={() => setSound((s) => !s)}
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-[#2C3E2D]/70 hover:text-[#D45D3C] transition-colors"
-                >
-                    {sound ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                    Sound alert {sound ? "on" : "off"}
-                </button>
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-8 flex flex-wrap gap-2 items-center">
+                {FILTERS.map(({ value, label }) => (
+                    <button
+                        key={value}
+                        aria-pressed={filter === value}
+                        onClick={() => setFilter(value)}
+                        className={pillClass(filter === value)}
+                    >
+                        {label}
+                    </button>
+                ))}
             </div>
 
             <ErrorBanner message={error} />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {COLUMNS.map((col) => {
-                    const list = orders.filter((o) => (o.status || "").toUpperCase() === col.status);
+                    const list = visibleOrders.filter((o) => norm(o.status) === col.status);
                     return (
                         <div key={col.status} className="bg-[#2C3E2D]/5 rounded-2xl p-4 min-h-[220px]">
                             <div className="flex items-center justify-between mb-4">
@@ -307,9 +278,12 @@ function KitchenBoard() {
                                         <OrderCard
                                             key={o.id}
                                             order={o}
-                                            fresh={fresh.has(o.id)}
+                                            fresh={freshOrders.has(o.id)}
+                                            busy={busy.isBusy(`order-${o.id}`)}
+                                            onSeen={onSeen}
                                             onMove={move}
                                             onInvoice={openInvoice}
+                                            onOpenTable={onOpenTable}
                                         />
                                     ))}
                                 </div>
@@ -324,170 +298,352 @@ function KitchenBoard() {
     );
 }
 
-function InvoiceModal({ invoice, onClose, onPaid }) {
-    const [error, setError] = useState("");
-    const [working, setWorking] = useState(false);
-    const [method, setMethod] = useState("CASH");
+const dateLabel = (iso) => (iso === isoDate(0) ? "Today" : iso === isoDate(1) ? "Tomorrow" : iso);
 
-    const pay = async () => {
-        setWorking(true);
-        try {
-            await api.pay(invoice.id, method);
-            onPaid(invoice);
-        } catch (e) {
-            setError(e.message);
-            setWorking(false);
-        }
+function ReservationsPanel({ reservations, freshReservations, onSeen, onRefresh, confirm }) {
+    const [error, setError] = useState("");
+    const busy = useBusy();
+
+    const byDateTime = (a, b) => `${resDate(a)} ${resTime(a)}`.localeCompare(`${resDate(b)} ${resTime(b)}`);
+    const active = reservations.filter((r) => resStatus(r) !== "CANCELLED").sort(byDateTime);
+    const pending = active.filter((r) => resStatus(r) === "PENDING");
+    const acknowledged = active.filter((r) => resStatus(r) === "ACKNOWLEDGED");
+
+    const updateStatus = (res, status) => {
+        const id = resId(res);
+        return busy.run(`res-${id}`, async () => {
+            if (status === "CANCELLED" && !(await confirm(`Cancel reservation for ${res.guestName || "this guest"}?`))) {
+                return;
+            }
+            try {
+                await api.setReservationStatus(id, status);
+                setError("");
+                await onRefresh();
+            } catch (e) {
+                setError(e.message);
+            }
+        });
+    };
+
+    const renderCard = (r, isPending) => {
+        const id = resId(r);
+        const time = resTime(r) || "Time TBC";
+        const isFresh = freshReservations.has(id);
+        const working = busy.isBusy(`res-${id}`);
+
+        return (
+            <div
+                key={id}
+                onPointerEnter={() => isFresh && onSeen(id)}
+                onFocus={() => isFresh && onSeen(id)}
+                className={`bg-white rounded-2xl shadow-sm border p-5 transition-all ${
+                    isFresh
+                        ? "border-amber-500 ring-2 ring-amber-400/50 animate-pulse"
+                        : isPending
+                            ? "border-amber-200"
+                            : "border-gray-100"
+                }`}
+            >
+                <div className="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                        <span className="inline-block text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 mb-2">
+                            {dateLabel(resDate(r))} · {time} · Table {r.tableNumber ?? r.tableId}
+                        </span>
+                        <h3 className="font-serif text-lg font-bold text-[#2C3E2D]">{r.guestName || "Registered Guest"}</h3>
+                    </div>
+                    {!isPending && (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-800">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Acknowledged
+                        </span>
+                    )}
+                </div>
+
+                <div className="flex flex-wrap gap-4 text-sm text-[#2C3E2D]/70 mb-3">
+                    {r.partySize ? (
+                        <span className="inline-flex items-center gap-1.5">
+                            <Users className="w-4 h-4" /> {r.partySize} guests
+                        </span>
+                    ) : null}
+                    {r.guestPhone && (
+                        <span className="inline-flex items-center gap-1.5">
+                            <Phone className="w-4 h-4" /> {r.guestPhone}
+                        </span>
+                    )}
+                </div>
+
+                {r.notes && (
+                    <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200/70 text-xs text-amber-900">
+                        <span className="font-bold">Note:</span> {r.notes}
+                    </div>
+                )}
+
+                <div className="flex items-center gap-2 pt-2 border-t border-gray-50">
+                    {isPending && (
+                        <button
+                            disabled={working}
+                            onClick={() => updateStatus(r, "ACKNOWLEDGED")}
+                            className="flex-1 bg-[#2C3E2D] hover:bg-[#1A251B] text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm disabled:opacity-50"
+                        >
+                            Acknowledge
+                        </button>
+                    )}
+                    <button
+                        disabled={working}
+                        onClick={() => updateStatus(r, "CANCELLED")}
+                        className="px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-500 border border-gray-200 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        );
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden">
-                <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h2 className="text-2xl font-bold font-['Montserrat'] uppercase tracking-wide text-[#2C3E2D]">
-                        Invoice #{invoice.id}
+        <div className="space-y-8">
+            <ErrorBanner message={error} />
+
+            <div>
+                <div className="flex items-center gap-2 mb-4">
+                    <h2 className="text-sm uppercase tracking-widest font-bold text-[#2C3E2D]">
+                        Pending Reservations (Upcoming)
                     </h2>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 transition-colors p-1 bg-white rounded-full shadow-sm"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
+                    <UnreadBadge count={pending.length} />
                 </div>
 
-                <div className="p-8">
-                    <p className="text-sm text-[#2C3E2D]/60 mb-4">
-                        {invoice.tableId ? `Table ${invoice.tableId}` : `Pickup order #${invoice.orderId}`}
-                    </p>
-                    <div className="space-y-2 text-[#2C3E2D]">
-                        <div className="flex justify-between">
-                            <span>Subtotal</span>
-                            <span>{money(invoice.subtotal)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>Tax</span>
-                            <span>{money(invoice.taxAmount)}</span>
-                        </div>
-                        <div className="flex justify-between pt-3 mt-3 border-t-2 border-[#2C3E2D] text-lg font-bold">
-                            <span>Total</span>
-                            <span className="text-[#D45D3C]">{money(invoice.totalAmount)}</span>
-                        </div>
+                {pending.length === 0 ? (
+                    <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-sm text-gray-400">
+                        No pending reservations right now.
                     </div>
-
-                    {!invoice.paid && (
-                        <div className="mt-6">
-                            <label className="block text-xs font-bold uppercase tracking-widest text-[#2C3E2D] mb-2">
-                                Payment Method
-                            </label>
-                            <div className="flex gap-2">
-                                <button type="button" onClick={() => setMethod("CASH")} className={pillClass(method === "CASH")}>
-                                    Cash
-                                </button>
-                                <button type="button" onClick={() => setMethod("CARD")} className={pillClass(method === "CARD")}>
-                                    Card
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {error && (
-                        <p className="mt-4 text-sm text-red-700 bg-red-50 rounded-xl px-4 py-3">{error}</p>
-                    )}
-
-                    <div className="pt-6 flex gap-3">
-                        <button
-                            onClick={onClose}
-                            className="flex-1 bg-white border-2 border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 py-3.5 rounded-xl font-semibold transition-all"
-                        >
-                            Close
-                        </button>
-                        <button
-                            onClick={pay}
-                            disabled={working || invoice.paid}
-                            className="flex-1 bg-[#2C3E2D] hover:bg-[#1A251B] text-white py-3.5 rounded-xl font-semibold transition-all shadow-md disabled:opacity-50"
-                        >
-                            {invoice.paid ? "Already paid" : "Mark as paid"}
-                        </button>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {pending.map((r) => renderCard(r, true))}
                     </div>
+                )}
+            </div>
 
-                    {error && (
-                        <button
-                            onClick={() => onPaid(invoice)}
-                            className="mt-3 w-full text-xs text-gray-500 underline"
-                        >
-                            Clear this bill from the list
-                        </button>
-                    )}
-                </div>
+            <div>
+                <h2 className="text-sm uppercase tracking-widest font-bold text-[#2C3E2D]/70 mb-4">
+                    Acknowledged ({acknowledged.length})
+                </h2>
+
+                {acknowledged.length === 0 ? (
+                    <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-sm text-gray-400">
+                        No acknowledged reservations yet.
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {acknowledged.map((r) => renderCard(r, false))}
+                    </div>
+                )}
             </div>
         </div>
     );
 }
 
-function TicketPanel({ tableId, tableNumber, reservations = [], bill, onInvoice, onChanged }) {
-    const [ticket, setTicket] = useState(null);
-    const [loaded, setLoaded] = useState(false);
-    const [menu, setMenu] = useState([]);
-    const [menuItemId, setMenuItemId] = useState("");
-    const [qty, setQty] = useState(1);
+function InvoiceModal({ invoice, onClose, onPaid }) {
     const [error, setError] = useState("");
     const [working, setWorking] = useState(false);
+    const [method, setMethod] = useState("CASH");
+    const [paid, setPaid] = useState(Boolean(invoice.paid));
+    const submitting = useRef(false);
 
-    const loadTicket = useCallback(async () => {
+    const pay = async () => {
+        if (submitting.current || paid) return;
+        submitting.current = true;
+        setWorking(true);
         try {
-            const list = await api.openTickets(tableId);
-            setTicket(list[0] || null);
-            setError("");
+            await api.pay(invoice.id, method);
+            setPaid(true);
+            onPaid(invoice);
         } catch (e) {
             setError(e.message);
+            setWorking(false);
+        } finally {
+            submitting.current = false;
         }
-        setLoaded(true);
+    };
+
+    return (
+        <Modal label={`Invoice ${invoice.id}`} onClose={onClose}>
+            <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h2 className="text-2xl font-bold font-['Montserrat'] uppercase tracking-wide text-[#2C3E2D]">
+                    Invoice #{invoice.id}
+                </h2>
+                <button
+                    onClick={onClose}
+                    aria-label="Close invoice"
+                    className="text-gray-400 hover:text-gray-600 transition-colors p-1 bg-white rounded-full shadow-sm"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+            </div>
+
+            <div className="p-8">
+                <p className="text-sm text-[#2C3E2D]/60 mb-4">
+                    {invoice.tableId ? `Table ${invoice.tableId}` : `Pickup order #${invoice.orderId}`}
+                </p>
+                <div className="space-y-2 text-[#2C3E2D]">
+                    <div className="flex justify-between">
+                        <span>Subtotal</span>
+                        <span>{money(invoice.subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span>Tax</span>
+                        <span>{money(invoice.taxAmount)}</span>
+                    </div>
+                    <div className="flex justify-between pt-3 mt-3 border-t-2 border-[#2C3E2D] text-lg font-bold">
+                        <span>Total</span>
+                        <span className="text-[#D45D3C]">{money(invoice.totalAmount)}</span>
+                    </div>
+                </div>
+
+                {!paid && (
+                    <div className="mt-6">
+                        <p className="block text-xs font-bold uppercase tracking-widest text-[#2C3E2D] mb-2">
+                            Payment Method
+                        </p>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                aria-pressed={method === "CASH"}
+                                onClick={() => setMethod("CASH")}
+                                className={pillClass(method === "CASH")}
+                            >
+                                Cash
+                            </button>
+                            <button
+                                type="button"
+                                aria-pressed={method === "CARD"}
+                                onClick={() => setMethod("CARD")}
+                                className={pillClass(method === "CARD")}
+                            >
+                                Card
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {error && <p role="alert" className="mt-4 text-sm text-red-700 bg-red-50 rounded-xl px-4 py-3">{error}</p>}
+
+                <div className="pt-6 flex gap-3">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 bg-white border-2 border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 py-3.5 rounded-xl font-semibold transition-all"
+                    >
+                        Close
+                    </button>
+                    <button
+                        onClick={pay}
+                        disabled={working || paid}
+                        className="flex-1 bg-[#2C3E2D] hover:bg-[#1A251B] text-white py-3.5 rounded-xl font-semibold transition-all shadow-md disabled:opacity-50"
+                    >
+                        {paid ? "Already paid" : working ? "Saving…" : "Mark as paid"}
+                    </button>
+                </div>
+            </div>
+        </Modal>
+    );
+}
+
+function TicketPanel({ tableId, tableNumber, reservations = [], bill, tick, onInvoice, onChanged }) {
+    const [tickets, setTickets] = useState([]);
+    const [activeId, setActiveId] = useState(null);
+    const [loadState, setLoadState] = useState("loading");
+    const [menu, setMenu] = useState([]);
+    const [menuError, setMenuError] = useState("");
+    const [menuItemId, setMenuItemId] = useState("");
+    const [qty, setQty] = useState("1");
+    const [error, setError] = useState("");
+    const busy = useBusy();
+    const loadSeq = useRef(0);
+
+    const working = busy.isBusy("ticket");
+    const ticket = tickets.find((t) => t.id === activeId) ?? tickets[0] ?? null;
+
+    const loadTickets = useCallback(async () => {
+        const id = ++loadSeq.current;
+        try {
+            const list = (await api.openTickets(tableId)) || [];
+            if (id !== loadSeq.current) return;
+            setTickets(list);
+            setLoadState("ok");
+            setError("");
+        } catch (e) {
+            if (id !== loadSeq.current) return;
+            setLoadState((s) => (s === "ok" ? "ok" : "error"));
+            setError(e.message);
+        }
     }, [tableId]);
 
     useEffect(() => {
-        if (!bill) loadTicket();
-    }, [bill, loadTicket]);
+        if (!bill && !busy.isBusy("ticket")) loadTickets();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [bill, tick, loadTickets]);
 
-    useEffect(() => {
+    const loadMenu = useCallback(() => {
         api.menu()
-            .then((data) => setMenu(Array.isArray(data) ? data : data?.content || []))
-            .catch(() => setError("Could not load the menu"));
+            .then((data) => {
+                setMenu(asList(data) || []);
+                setMenuError("");
+            })
+            .catch(() => setMenuError("Could not load the menu."));
     }, []);
 
-    const run = async (action) => {
-        setWorking(true);
-        try {
-            await action();
-            setError("");
-        } catch (e) {
-            setError(e.message);
-        }
-        setWorking(false);
+    useEffect(() => {
+        loadMenu();
+    }, [loadMenu]);
+
+    const upsert = (t) => {
+        setTickets((list) => (list.some((x) => x.id === t.id) ? list.map((x) => (x.id === t.id ? t : x)) : [...list, t]));
+        setActiveId(t.id);
     };
+
+    const run = (action) =>
+        busy.run("ticket", async () => {
+            loadSeq.current += 1;
+            try {
+                await action();
+                setError("");
+            } catch (e) {
+                setError(e.message);
+            }
+        });
 
     const open = () =>
         run(async () => {
-            setTicket(await api.openTicket(tableId));
-            onChanged();
+            upsert(await api.openTicket(tableId));
+            setLoadState("ok");
+            await onChanged();
         });
 
     const add = () =>
         run(async () => {
-            if (!menuItemId) throw new Error("Choose a menu item first");
-            setTicket(await api.addItem(ticket.id, Number(menuItemId), Number(qty)));
-            setQty(1);
-            onChanged();
+            const quantity = Number(qty);
+            if (!menuItemId) throw new Error("Choose a menu item first.");
+            if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
+                throw new Error("Quantity must be a whole number from 1 to 99.");
+            }
+            upsert(await api.addItem(ticket.id, Number(menuItemId), quantity));
+            setQty("1");
+            await onChanged();
         });
 
     const remove = (itemId) =>
         run(async () => {
-            setTicket(await api.removeItem(ticket.id, itemId));
-            onChanged();
+            upsert(await api.removeItem(ticket.id, itemId));
+            await onChanged();
         });
 
     const generate = () =>
         run(async () => {
-            onInvoice(await api.invoice(tableId));
+            onInvoice(await api.invoice(tableId), tableId);
+        });
+
+    const acknowledge = (reservationId) =>
+        run(async () => {
+            await api.setReservationStatus(reservationId, "ACKNOWLEDGED");
+            await onChanged();
         });
 
     const panel = "bg-white rounded-2xl shadow-sm border border-gray-100 p-6";
@@ -496,15 +652,40 @@ function TicketPanel({ tableId, tableNumber, reservations = [], bill, onInvoice,
     const title = `Table ${tableNumber ?? tableId}`;
 
     const reservationBox = reservations.length > 0 && (
-        <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
+        <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2">
             <p className="font-bold uppercase tracking-wider">Today&apos;s Reservations</p>
             {reservations.map((r) => {
-                const time = (r.reservationTime || r.time || "").slice(0, 5);
+                const id = resId(r);
+                const time = resTime(r) || "Time TBC";
                 const name = r.guestName || r.customerName || "Registered Guest";
+                const isAck = resStatus(r) === "ACKNOWLEDGED";
+
                 return (
-                    <p key={r.id}>
-                        {time} — {name} {r.partySize ? `(${r.partySize} guests)` : ""}
-                    </p>
+                    <div
+                        key={id}
+                        className="flex items-center justify-between gap-2 pt-1.5 border-t border-amber-200/60 first:border-0 first:pt-0"
+                    >
+                        <div>
+                            <p className="font-semibold">
+                                {time} — {name} {r.partySize ? `(${r.partySize} guests)` : ""}
+                            </p>
+                            {r.notes && <p className="text-[11px] opacity-80 mt-0.5">{r.notes}</p>}
+                        </div>
+                        {isAck ? (
+                            <span className="shrink-0 px-2 py-1 rounded-md bg-green-100 text-green-800 font-bold uppercase text-[10px]">
+                                Acknowledged
+                            </span>
+                        ) : (
+                            <button
+                                type="button"
+                                disabled={working}
+                                onClick={() => acknowledge(id)}
+                                className="shrink-0 px-2.5 py-1 rounded-md bg-[#2C3E2D] hover:bg-[#1A251B] text-white font-semibold text-[11px] transition-colors disabled:opacity-50"
+                            >
+                                Acknowledge
+                            </button>
+                        )}
+                    </div>
                 );
             })}
         </div>
@@ -519,7 +700,7 @@ function TicketPanel({ tableId, tableNumber, reservations = [], bill, onInvoice,
                     The bill has been issued: <span className="font-bold text-[#D45D3C]">{money(bill.totalAmount)}</span>
                 </p>
                 <button
-                    onClick={() => onInvoice(bill)}
+                    onClick={() => onInvoice(bill, tableId)}
                     className="w-full bg-[#D45D3C] hover:bg-[#B84A2E] text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-md flex items-center justify-center gap-2"
                 >
                     <Receipt className="w-5 h-5" /> View invoice and take payment
@@ -528,10 +709,25 @@ function TicketPanel({ tableId, tableNumber, reservations = [], bill, onInvoice,
         );
     }
 
-    if (!loaded) {
+    if (loadState === "loading") {
         return (
             <div className={panel}>
                 <p className="text-sm text-gray-400">Loading…</p>
+            </div>
+        );
+    }
+
+    if (loadState === "error") {
+        return (
+            <div className={panel}>
+                <h2 className="font-serif text-xl font-bold text-[#2C3E2D] mb-4">{title}</h2>
+                <ErrorBanner message={error} />
+                <button
+                    onClick={loadTickets}
+                    className="w-full bg-[#2C3E2D] hover:bg-[#1A251B] text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-md"
+                >
+                    Try again
+                </button>
             </div>
         );
     }
@@ -540,7 +736,12 @@ function TicketPanel({ tableId, tableNumber, reservations = [], bill, onInvoice,
         <div className={panel}>
             <h2 className="font-serif text-xl font-bold text-[#2C3E2D] mb-4">{title}</h2>
             {reservationBox}
-            <ErrorBanner message={error} />
+            <ErrorBanner message={error || menuError} />
+            {menuError && (
+                <button onClick={loadMenu} className="mb-4 text-xs font-bold text-[#D45D3C] hover:underline">
+                    Reload menu
+                </button>
+            )}
 
             {!ticket ? (
                 <button
@@ -552,12 +753,28 @@ function TicketPanel({ tableId, tableNumber, reservations = [], bill, onInvoice,
                 </button>
             ) : (
                 <>
-                    <p className="text-xs uppercase tracking-widest font-bold text-[#2C3E2D]/50 mb-3">
-                        Ticket #{ticket.id}
-                    </p>
+                    {tickets.length > 1 ? (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                            {tickets.map((t) => (
+                                <button
+                                    key={t.id}
+                                    aria-pressed={t.id === ticket.id}
+                                    onClick={() => setActiveId(t.id)}
+                                    className={pillClass(t.id === ticket.id)}
+                                >
+                                    Ticket #{t.id}
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-xs uppercase tracking-widest font-bold text-[#2C3E2D]/50 mb-3">
+                            Ticket #{ticket.id}
+                        </p>
+                    )}
 
                     <div className="flex gap-2 mb-5">
                         <select
+                            aria-label="Menu item"
                             value={menuItemId}
                             onChange={(e) => setMenuItemId(e.target.value)}
                             className={`${inputClass} flex-1 min-w-0 cursor-pointer`}
@@ -570,8 +787,12 @@ function TicketPanel({ tableId, tableNumber, reservations = [], bill, onInvoice,
                             ))}
                         </select>
                         <input
+                            aria-label="Quantity"
                             type="number"
                             min="1"
+                            max="99"
+                            step="1"
+                            inputMode="numeric"
                             value={qty}
                             onChange={(e) => setQty(e.target.value)}
                             className={`${inputClass} w-20`}
@@ -581,12 +802,13 @@ function TicketPanel({ tableId, tableNumber, reservations = [], bill, onInvoice,
                             disabled={working}
                             className="bg-[#2C3E2D] hover:bg-[#1A251B] text-white px-4 rounded-xl font-semibold transition-all shadow-md disabled:opacity-50"
                             title="Add to bill"
+                            aria-label="Add to bill"
                         >
                             <Plus className="w-5 h-5" />
                         </button>
                     </div>
 
-                    {ticket.items.length === 0 ? (
+                    {(ticket.items || []).length === 0 ? (
                         <p className="text-sm text-gray-400 py-4 text-center">No items yet.</p>
                     ) : (
                         <div className="divide-y divide-gray-50 text-sm text-[#2C3E2D]">
@@ -599,8 +821,9 @@ function TicketPanel({ tableId, tableNumber, reservations = [], bill, onInvoice,
                                     <button
                                         onClick={() => remove(i.id)}
                                         disabled={working}
-                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                                         title="Remove"
+                                        aria-label={`Remove ${i.name}`}
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </button>
@@ -615,7 +838,7 @@ function TicketPanel({ tableId, tableNumber, reservations = [], bill, onInvoice,
 
                     <button
                         onClick={generate}
-                        disabled={working || ticket.items.length === 0}
+                        disabled={working || (ticket.items || []).length === 0}
                         className="mt-6 w-full bg-[#D45D3C] hover:bg-[#B84A2E] text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                         <Receipt className="w-5 h-5" /> Generate invoice
@@ -626,76 +849,76 @@ function TicketPanel({ tableId, tableNumber, reservations = [], bill, onInvoice,
     );
 }
 
-function TablesPanel() {
+function loadLocalBills() {
+    try {
+        const parsed = JSON.parse(store.get("pendingInvoices"));
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+        return Object.fromEntries(Object.entries(parsed).filter(([, v]) => v && typeof v === "object" && v.id != null));
+    } catch {
+        return {};
+    }
+}
+
+function TablesPanel({ orders, reservations, tick, selected, onSelect, onRefresh }) {
     const [tables, setTables] = useState([]);
-    const [reservationsByTable, setReservationsByTable] = useState({});
-    const [selected, setSelected] = useState(null);
-    const [busy, setBusy] = useState(new Set());
     const [invoice, setInvoice] = useState(null);
     const [error, setError] = useState("");
-    const [bills, setBills] = useState(() => {
-        try {
-            return JSON.parse(localStorage.getItem("pendingInvoices")) || {};
-        } catch {
-            return {};
-        }
-    });
+    const [bills, setBills] = useState(loadLocalBills);
 
     useEffect(() => {
-        localStorage.setItem("pendingInvoices", JSON.stringify(bills));
+        store.set("pendingInvoices", JSON.stringify(bills));
     }, [bills]);
 
-    const refreshData = useCallback(async () => {
-        try {
-            const [tableData, resData, dineInOrders] = await Promise.all([
-                api.tables(),
-                api.reservationsByDate(todayISO()),
-                api.kitchen("DINE_IN")
-            ]);
-
-            setTables(Array.isArray(tableData) ? tableData : []);
-            setBusy(new Set((dineInOrders || []).map((o) => o.tableId)));
-
-            const grouped = {};
-            for (const r of resData || []) {
-                const tId = r.tableId ?? r.restaurantTableId ?? r.table?.id;
-                if (tId != null) {
-                    if (!grouped[tId]) grouped[tId] = [];
-                    grouped[tId].push(r);
-                }
-            }
-            setReservationsByTable(grouped);
-            setError("");
-        } catch (e) {
-            setError(e.message);
-        }
+    useEffect(() => {
+        api.tables()
+            .then((data) => {
+                setTables(asList(data) || []);
+                setError("");
+            })
+            .catch((e) => setError(e.message));
     }, []);
 
-    useEffect(() => {
-        refreshData();
-        const timer = setInterval(refreshData, POLL_MS);
-        return () => clearInterval(timer);
-    }, [refreshData]);
+    const activeDineInTables = useMemo(
+        () =>
+            new Set(
+                orders
+                    .filter((o) => norm(o.orderType) === "DINE_IN" && !TERMINAL.includes(norm(o.status)))
+                    .map((o) => o.tableId)
+            ),
+        [orders]
+    );
 
-    const issued = (inv) => {
-        setBills((b) => ({ ...b, [inv.tableId]: inv }));
-        setInvoice(inv);
-        refreshData();
+    const reservationsByTable = useMemo(() => {
+        const map = {};
+        for (const r of reservations) {
+            if (resStatus(r) === "CANCELLED") continue;
+            const tId = r.tableId ?? r.restaurantTableId ?? r.table?.id;
+            if (tId != null) (map[tId] ||= []).push(r);
+        }
+        return map;
+    }, [reservations]);
+
+    const issued = async (inv, tableId) => {
+        const key = inv.tableId ?? tableId;
+        setBills((b) => ({ ...b, [key]: { ...inv, tableId: key } }));
+        setInvoice({ ...inv, tableId: key });
+        await onRefresh();
     };
 
-    const paid = (inv) => {
+    const paid = async (inv) => {
         setBills((b) => {
             const copy = { ...b };
             delete copy[inv.tableId];
             return copy;
         });
         setInvoice(null);
-        setSelected(null);
-        refreshData();
+        onSelect(null);
+        await onRefresh();
     };
 
     const tileClass = (state, isSelected) => {
-        const base = "rounded-2xl border-2 p-5 flex flex-col items-center gap-1 transition-all hover:-translate-y-0.5 hover:shadow-md";
+        const base =
+            "rounded-2xl border-2 p-5 flex flex-col items-center gap-1 transition-all hover:-translate-y-0.5 hover:shadow-md";
         const colour =
             state === "billed"
                 ? "bg-green-50 border-green-200 text-green-800"
@@ -716,10 +939,10 @@ function TablesPanel() {
                 <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 content-start">
                     {tables.map((t) => {
                         const tableRes = reservationsByTable[t.id] || [];
-                        const firstTime = (tableRes[0]?.reservationTime || tableRes[0]?.time || "").slice(0, 5);
+                        const firstTime = resTime(tableRes[0] || {});
                         const state = bills[t.id]
                             ? "billed"
-                            : busy.has(t.id)
+                            : activeDineInTables.has(t.id)
                                 ? "busy"
                                 : tableRes.length > 0
                                     ? "reserved"
@@ -736,7 +959,8 @@ function TablesPanel() {
                         return (
                             <button
                                 key={t.id}
-                                onClick={() => setSelected(t.id)}
+                                aria-pressed={selected === t.id}
+                                onClick={() => onSelect(t.id)}
                                 className={tileClass(state, selected === t.id)}
                             >
                                 <span className="font-serif text-3xl font-bold">{t.tableNumber ?? t.id}</span>
@@ -755,8 +979,9 @@ function TablesPanel() {
                             tableNumber={selectedTable.tableNumber ?? selectedTable.id}
                             reservations={reservationsByTable[selectedTable.id] || []}
                             bill={bills[selectedTable.id]}
+                            tick={tick}
                             onInvoice={issued}
-                            onChanged={refreshData}
+                            onChanged={onRefresh}
                         />
                     ) : (
                         <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 border-dashed">
@@ -773,11 +998,171 @@ function TablesPanel() {
 }
 
 export default function AdminPOS() {
+    const navigate = useNavigate();
+    const later = useLater();
+    const [confirm, confirmDialog] = useConfirm();
+
     const [tab, setTab] = useState("kitchen");
+    const [sound, setSound] = useState(true);
+    const [audioReady, setAudioReady] = useState(isAudioUnlocked);
+    const [orders, setOrders] = useState([]);
+    const [reservations, setReservations] = useState([]);
+    const [error, setError] = useState("");
+    const [freshOrders, setFreshOrders] = useState(() => new Set());
+    const [freshReservations, setFreshReservations] = useState(() => new Set());
+    const [toasts, setToasts] = useState([]);
+    const [selectedTable, setSelectedTable] = useState(null);
+    const [tick, setTick] = useState(0);
+
+    const seenOrders = useRef(null);
+    const seenReservations = useRef(null);
+    const soundRef = useRef(sound);
+    soundRef.current = sound;
+
+    useEffect(() => {
+        const unlock = async () => {
+            const ok = await unlockAudio();
+            setAudioReady(ok);
+        };
+        window.addEventListener("pointerdown", unlock, { once: true });
+        window.addEventListener("keydown", unlock, { once: true });
+        return () => {
+            window.removeEventListener("pointerdown", unlock);
+            window.removeEventListener("keydown", unlock);
+        };
+    }, []);
+
+    const pushToast = useCallback(
+        (toast) => {
+            const id = `${Date.now()}-${Math.random()}`;
+            setToasts((prev) => [{ ...toast, id }, ...prev].slice(0, 6));
+            later(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 12000);
+        },
+        [later]
+    );
+
+    const poll = useCallback(
+        async (signal) => {
+            try {
+                const today = isoDate(0);
+                const [orderData, resData] = await Promise.all([
+                    api.kitchen("", signal),
+                    api.allReservations(signal)
+                ]);
+                if (signal.aborted) return;
+
+                const safeOrders = asList(orderData);
+                const allRes = asList(resData);
+                if (!safeOrders || !allRes) throw new Error("Unexpected response from the server.");
+
+                const upcomingRes = allRes.filter((r) => resDate(r) >= today);
+
+                setOrders(safeOrders);
+                setReservations(upcomingRes);
+                setTick((t) => t + 1);
+                setError("");
+
+                const prevOrders = seenOrders.current;
+                if (prevOrders) {
+                    const newOrders = safeOrders.filter((o) => !prevOrders.has(o.id) && norm(o.status) === "PENDING");
+                    if (newOrders.length > 0) {
+                        const ids = newOrders.map((o) => o.id);
+                        setFreshOrders((prev) => new Set([...prev, ...ids]));
+                        if (soundRef.current) playAlert("order");
+                        newOrders.forEach((o) => {
+                            const isPickup = norm(o.orderType) !== "DINE_IN";
+                            pushToast({
+                                kind: "order",
+                                targetTab: "kitchen",
+                                title: isPickup ? `New Pickup Order #${o.id}` : `New Dine-in Order #${o.id}`,
+                                subtitle: isPickup
+                                    ? `${o.guestName || "Customer"} · ${money(o.total)}`
+                                    : `Table ${o.tableId} · ${money(o.total)}`
+                            });
+                        });
+                    }
+                }
+                seenOrders.current = new Set([...(prevOrders || []), ...safeOrders.map((o) => o.id)]);
+
+                const prevRes = seenReservations.current;
+                if (prevRes) {
+                    const newRes = upcomingRes.filter((r) => !prevRes.has(resId(r)) && resStatus(r) !== "CANCELLED");
+                    if (newRes.length > 0) {
+                        const ids = newRes.map(resId);
+                        setFreshReservations((prev) => new Set([...prev, ...ids]));
+                        if (soundRef.current) playAlert("reservation");
+                        newRes.forEach((r) => {
+                            pushToast({
+                                kind: "reservation",
+                                targetTab: "reservations",
+                                title: "New Table Reservation",
+                                subtitle: `${r.guestName || "Guest"} · Table ${r.tableNumber ?? r.tableId} · ${dateLabel(resDate(r))} ${resTime(r) || "Time TBC"}`
+                            });
+                        });
+                    }
+                }
+                seenReservations.current = new Set([...(prevRes || []), ...upcomingRes.map(resId)]);
+            } catch (e) {
+                if (e?.name !== "AbortError" && !(e instanceof AuthError)) setError(e.message);
+                throw e;
+            }
+        },
+        [pushToast]
+    );
+
+    const refresh = usePolling(poll, {
+        onAuthError: () => navigate("/admin", { replace: true })
+    });
+
+    const markOrderSeen = useCallback((id) => {
+        setFreshOrders((prev) => {
+            if (!prev.has(id)) return prev;
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+        });
+    }, []);
+
+    const markReservationSeen = useCallback((id) => {
+        setFreshReservations((prev) => {
+            if (!prev.has(id)) return prev;
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+        });
+    }, []);
+
+    const pendingOrderCount = orders.filter((o) => norm(o.status) === "PENDING").length;
+    const pendingReservationCount = reservations.filter((r) => resStatus(r) === "PENDING").length;
+    const todaysReservations = reservations.filter((r) => resDate(r) === isoDate(0));
+
+    const handleOpenToast = (toast) => {
+        setTab(toast.targetTab);
+        setToasts((prev) => prev.filter((t) => t.id !== toast.id));
+    };
+
+    const openTable = (tableId) => {
+        setSelectedTable(tableId);
+        setTab("tables");
+    };
+
+    const toggleSound = async () => {
+        const ok = await unlockAudio();
+        setAudioReady(ok);
+        if (!audioReady && sound) return;
+        setSound((s) => !s);
+    };
 
     return (
         <div className="max-w-7xl mx-auto font-sans pb-16 px-4 sm:px-8 pt-28">
-            <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <ToastStack
+                toasts={toasts}
+                onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))}
+                onOpen={handleOpenToast}
+            />
+            {confirmDialog}
+
+            <div className="mb-8 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                 <div>
                     <Link
                         to="/admin/dashboard"
@@ -785,31 +1170,73 @@ export default function AdminPOS() {
                     >
                         <ArrowLeft className="w-4 h-4" /> Back to Dashboard
                     </Link>
-                    <h1 className="font-serif text-3xl sm:text-4xl font-bold text-[#2C3E2D] mb-1">
-                        Order Queue &amp; POS
-                    </h1>
+                    <h1 className="font-serif text-3xl sm:text-4xl font-bold text-[#2C3E2D] mb-1">Order Queue &amp; POS</h1>
                     <p className="text-[#2C3E2D]/60 text-sm">
-                        Track kitchen orders and bill dine-in tables in real time.
+                        Track food orders, table reservations, and dine-in billing in real time.
                     </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                    <Link
-                        to="/menu"
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-[#D45D3C] bg-white hover:bg-[#D45D3C]/5 border border-[#D45D3C]/40 transition-all"
+                    <button
+                        aria-pressed={sound && audioReady}
+                        onClick={toggleSound}
+                        className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                            sound && !audioReady
+                                ? "bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100"
+                                : "bg-white border-gray-200 text-[#2C3E2D]/80 hover:text-[#D45D3C]"
+                        }`}
                     >
-                        <Utensils className="w-4 h-4" /> View Menu
-                    </Link>
+                        {sound ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                        {!sound ? "Sound Off" : audioReady ? "Sound On" : "Click to Enable Sound"}
+                    </button>
+
                     <button onClick={() => setTab("kitchen")} className={pillClass(tab === "kitchen")}>
                         Kitchen Orders
+                        <UnreadBadge count={pendingOrderCount} />
                     </button>
+
+                    <button onClick={() => setTab("reservations")} className={pillClass(tab === "reservations")}>
+                        Reservations
+                        <UnreadBadge count={pendingReservationCount} />
+                    </button>
+
                     <button onClick={() => setTab("tables")} className={pillClass(tab === "tables")}>
                         Dine-in Tables
                     </button>
                 </div>
             </div>
 
-            {tab === "kitchen" ? <KitchenBoard /> : <TablesPanel />}
+            <ErrorBanner message={error} />
+
+            {tab === "kitchen" && (
+                <KitchenBoard
+                    orders={orders}
+                    freshOrders={freshOrders}
+                    onSeen={markOrderSeen}
+                    onRefresh={refresh}
+                    confirm={confirm}
+                    onOpenTable={openTable}
+                />
+            )}
+            {tab === "reservations" && (
+                <ReservationsPanel
+                    reservations={reservations}
+                    freshReservations={freshReservations}
+                    onSeen={markReservationSeen}
+                    onRefresh={refresh}
+                    confirm={confirm}
+                />
+            )}
+            {tab === "tables" && (
+                <TablesPanel
+                    orders={orders}
+                    reservations={todaysReservations}
+                    tick={tick}
+                    selected={selectedTable}
+                    onSelect={setSelectedTable}
+                    onRefresh={refresh}
+                />
+            )}
         </div>
     );
 }

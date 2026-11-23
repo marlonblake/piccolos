@@ -59,6 +59,7 @@ public class ReservationService {
                 tableRepository.findByCapacityGreaterThanEqual(partySize);
 
         List<Integer> reservedTableIds = reservationRepository.findByReservationDate(date).stream()
+                .filter(r -> !"CANCELLED".equalsIgnoreCase(r.getStatus()))
                 .filter(r -> r.getRestaurantTable() != null && isOverlapping(r.getReservationTime(), time))
                 .map(r -> r.getRestaurantTable().getId())
                 .toList();
@@ -121,6 +122,24 @@ public class ReservationService {
         reservationRepository.delete(reservation);
     }
 
+    @Transactional
+    public ReservationResponse updateStatus(Integer id, String status) {
+        if (status == null || status.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation status is required.");
+        }
+
+        Reservation reservation = reservationRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reservation not found."));
+
+        String normalized = status.trim().toUpperCase();
+        if (!List.of("PENDING", "ACKNOWLEDGED", "COMPLETED", "CANCELLED").contains(normalized)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid reservation status.");
+        }
+
+        reservation.setStatus(normalized);
+        return new ReservationResponse(reservationRepository.save(reservation));
+    }
+
     private boolean isOverlapping(LocalTime existingTime, LocalTime requestedTime) {
         if (existingTime == null || requestedTime == null) return false;
         return Math.abs(Duration.between(existingTime, requestedTime).toMinutes()) < RESERVATION_DURATION_MINUTES;
@@ -166,6 +185,7 @@ public class ReservationService {
         }
 
         boolean alreadyReserved = reservationRepository.findByReservationDate(request.getReservationDate()).stream()
+                .filter(r -> !"CANCELLED".equalsIgnoreCase(r.getStatus()))
                 .filter(r -> r.getRestaurantTable() != null && r.getRestaurantTable().getId().equals(table.getId()))
                 .filter(r -> excludedReservationId == null || !r.getId().equals(excludedReservationId))
                 .anyMatch(r -> isOverlapping(r.getReservationTime(), request.getReservationTime()));
