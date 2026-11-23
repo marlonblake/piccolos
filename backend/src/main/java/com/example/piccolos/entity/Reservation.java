@@ -38,6 +38,9 @@ public class Reservation {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @Column(name = "status", nullable = false, length = 20)
+    private String status = "PENDING";
+
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
@@ -64,4 +67,7 @@ public class Reservation {
 
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 }

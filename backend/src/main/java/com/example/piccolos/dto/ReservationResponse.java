@@ -15,6 +15,7 @@ public class ReservationResponse {
     private String reservationDate;
     private String reservationTime;
     private String notes;
+    private String status;
 
     public ReservationResponse(Reservation reservation) {
         this.reservationId = reservation.getId();
@@ -22,6 +23,7 @@ public class ReservationResponse {
         this.guestPhone = reservation.getGuestPhone();
         this.partySize = reservation.getPartySize();
         this.notes = reservation.getNotes();
+        this.status = reservation.getStatus();
 
         if (reservation.getRestaurantTable() != null) {
             this.tableId = reservation.getRestaurantTable().getId();
@@ -53,4 +55,5 @@ public class ReservationResponse {
     public String getReservationDate() { return reservationDate; }
     public String getReservationTime() { return reservationTime; }
     public String getNotes() { return notes; }
+    public String getStatus() { return status; }
 }
