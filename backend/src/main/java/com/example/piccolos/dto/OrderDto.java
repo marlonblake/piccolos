@@ -1,0 +1,29 @@
+package com.example.piccolos.dto;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+
+public record OrderDto(
+        Long id,
+        Long tableId,
+        Long userId,
+        String guestName,
+        String guestPhone,
+        LocalDate pickupDate,
+        LocalTime pickupTime,
+        String orderType,
+        String status,
+        List<ItemDto> items,
+        BigDecimal total
+) {
+    public record ItemDto(
+            Long id,
+            Integer menuItemId,
+            String name,
+            BigDecimal price,
+            Integer quantity,
+            BigDecimal lineTotal
+    ) {}
+}
