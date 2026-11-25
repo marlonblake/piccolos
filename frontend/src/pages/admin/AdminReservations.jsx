@@ -1,16 +1,15 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarDays, Clock3, Plus, RefreshCw, Save, Trash2, Users, X } from "lucide-react";
 import { adminRequest } from "../../api/adminApi";
-
-const today = new Date().toISOString().slice(0, 10);
-const blankReservation = {
-    guestName: "",
-    guestPhone: "",
-    tableId: "",
-    partySize: "2",
-    reservationDate: today,
-    reservationTime: "19:00"
-};
+import {
+    HOURS,
+    minsToHHMM,
+    hhmmToMins,
+    formatTimeLabel,
+    RESERVATION_START_SLOTS,
+    getNearestReservationSlot,
+    getValidReservationEndSlots
+} from "../../utils/timeSlots";
 
 const sortLatestFirst = (list) =>
     [...list].sort((a, b) =>
@@ -20,16 +19,48 @@ const sortLatestFirst = (list) =>
     );
 
 function ReservationForm({ reservation, tables, onCancel, onSaved }) {
-    const [form, setForm] = useState(reservation ? {
-        guestName: reservation.guestName || "",
-        guestPhone: reservation.guestPhone || "",
-        tableId: String(reservation.tableId || ""),
-        partySize: String(reservation.partySize || 2),
-        reservationDate: reservation.reservationDate || today,
-        reservationTime: (reservation.reservationTime || "19:00").slice(0, 5)
-    } : { ...blankReservation, tableId: tables[0] ? String(tables[0].id) : "" });
+    const defaults = useMemo(() => getNearestReservationSlot(), []);
+    const [form, setForm] = useState(() => {
+        if (reservation) {
+            const start = (reservation.reservationTime || "19:00").slice(0, 5);
+            const fallbackEnd = minsToHHMM(Math.min(hhmmToMins(start) + 60, HOURS.CLOSE_MINS));
+            return {
+                guestName: reservation.guestName || "",
+                guestPhone: reservation.guestPhone || "",
+                tableId: String(reservation.tableId || ""),
+                partySize: String(reservation.partySize || 2),
+                reservationDate: reservation.reservationDate || defaults.date,
+                reservationTime: start,
+                endTime: reservation.endTime ? reservation.endTime.slice(0, 5) : fallbackEnd
+            };
+        }
+        return {
+            guestName: "",
+            guestPhone: "",
+            tableId: tables[0] ? String(tables[0].id) : "",
+            partySize: "2",
+            reservationDate: defaults.date,
+            reservationTime: defaults.startTime,
+            endTime: defaults.endTime
+        };
+    });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
+
+    const validEndSlots = useMemo(
+        () => getValidReservationEndSlots(form.reservationTime),
+        [form.reservationTime]
+    );
+
+    useEffect(() => {
+        if (validEndSlots.length > 0 && !validEndSlots.includes(form.endTime)) {
+            const preferred = minsToHHMM(Math.min(hhmmToMins(form.reservationTime) + 60, HOURS.CLOSE_MINS));
+            setForm((current) => ({
+                ...current,
+                endTime: validEndSlots.includes(preferred) ? preferred : validEndSlots[0]
+            }));
+        }
+    }, [validEndSlots, form.reservationTime, form.endTime]);
 
     const change = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
 
@@ -42,7 +73,8 @@ function ReservationForm({ reservation, tables, onCancel, onSaved }) {
                 ...form,
                 tableId: Number(form.tableId),
                 partySize: Number(form.partySize),
-                reservationTime: `${form.reservationTime}:00`
+                reservationTime: `${form.reservationTime}:00`,
+                endTime: `${form.endTime}:00`
             };
             const result = await adminRequest(
                 reservation ? `/admin/reservations/${reservation.reservationId}` : "/admin/reservations",
@@ -64,7 +96,7 @@ function ReservationForm({ reservation, tables, onCancel, onSaved }) {
             <div className="flex items-start justify-between gap-4 mb-5">
                 <div>
                     <h2 className="font-serif text-xl font-bold text-[#2C3E2D]">{reservation ? "Edit reservation" : "Create reservation"}</h2>
-                    <p className="text-sm text-gray-500 mt-1">Enter guest details, party size, and booking time.</p>
+                    <p className="text-sm text-gray-500 mt-1">Operating hours: 12:00 PM – 12:00 AM (30-minute intervals).</p>
                 </div>
                 <button type="button" onClick={onCancel} aria-label="Close form" className="p-2 rounded-lg text-gray-500 hover:bg-gray-100">
                     <X className="w-5 h-5" />
@@ -72,7 +104,7 @@ function ReservationForm({ reservation, tables, onCancel, onSaved }) {
             </div>
 
             {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">{error}</p>}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <label className="text-sm font-semibold text-[#2C3E2D]">
                     Guest name
                     <input name="guestName" required value={form.guestName} onChange={change} autoComplete="name"
@@ -98,13 +130,26 @@ function ReservationForm({ reservation, tables, onCancel, onSaved }) {
                 </label>
                 <label className="text-sm font-semibold text-[#2C3E2D]">
                     Date
-                    <input name="reservationDate" type="date" min={today} required value={form.reservationDate} onChange={change}
+                    <input name="reservationDate" type="date" min={defaults.minDate} required value={form.reservationDate} onChange={change}
                         className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 outline-none focus:border-[#D45D3C]" />
                 </label>
                 <label className="text-sm font-semibold text-[#2C3E2D]">
-                    Time
-                    <input name="reservationTime" type="time" required value={form.reservationTime} onChange={change}
-                        className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 outline-none focus:border-[#D45D3C]" />
+                    Start time
+                    <select name="reservationTime" required value={form.reservationTime} onChange={change}
+                        className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 outline-none focus:border-[#D45D3C]">
+                        {RESERVATION_START_SLOTS.map((slot) => (
+                            <option key={slot} value={slot}>{formatTimeLabel(slot)}</option>
+                        ))}
+                    </select>
+                </label>
+                <label className="text-sm font-semibold text-[#2C3E2D]">
+                    End time
+                    <select name="endTime" required value={form.endTime} onChange={change}
+                        className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 outline-none focus:border-[#D45D3C]">
+                        {validEndSlots.map((slot) => (
+                            <option key={slot} value={slot}>{formatTimeLabel(slot)}</option>
+                        ))}
+                    </select>
                 </label>
             </div>
             <div className="flex justify-end gap-3 mt-6">
@@ -227,7 +272,7 @@ export default function AdminReservations() {
                             <thead className="bg-[#FDFBF7] text-[11px] uppercase tracking-wider text-gray-500">
                                 <tr>
                                     <th className="px-5 py-3 font-bold">Guest</th>
-                                    <th className="px-5 py-3 font-bold">Date & time</th>
+                                    <th className="px-5 py-3 font-bold">Date &amp; time</th>
                                     <th className="px-5 py-3 font-bold">Table</th>
                                     <th className="px-5 py-3 font-bold">Party</th>
                                     <th className="px-5 py-3 font-bold text-right">Actions</th>
@@ -241,8 +286,15 @@ export default function AdminReservations() {
                                             <p className="text-xs text-gray-500 mt-1">{reservation.guestPhone}</p>
                                         </td>
                                         <td className="px-5 py-4 whitespace-nowrap">
-                                            <p className="inline-flex items-center gap-2 text-sm font-medium text-[#2C3E2D]"><CalendarDays className="w-4 h-4 text-[#D45D3C]" />{reservation.reservationDate}</p>
-                                            <p className="inline-flex items-center gap-2 text-xs text-gray-500 mt-1"><Clock3 className="w-3.5 h-3.5" />{(reservation.reservationTime || "").slice(0, 5)}</p>
+                                            <p className="inline-flex items-center gap-2 text-sm font-medium text-[#2C3E2D]">
+                                                <CalendarDays className="w-4 h-4 text-[#D45D3C]" />
+                                                {reservation.reservationDate}
+                                            </p>
+                                            <p className="inline-flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                                <Clock3 className="w-3.5 h-3.5" />
+                                                {formatTimeLabel(reservation.reservationTime)}
+                                                {reservation.endTime ? ` – ${formatTimeLabel(reservation.endTime)}` : ""}
+                                            </p>
                                         </td>
                                         <td className="px-5 py-4 whitespace-nowrap">
                                             <span className="rounded-full bg-[#2C3E2D]/10 px-3 py-1 text-xs font-bold text-[#2C3E2D]">

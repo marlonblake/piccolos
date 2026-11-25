@@ -24,6 +24,9 @@ public class Reservation {
     @Column(name = "reservation_time")
     private LocalTime reservationTime;
 
+    @Column(name = "reservation_endtime")
+    private LocalTime endTime;
+
     @Column(name = "party_size")
     private Integer partySize;
 
@@ -55,6 +58,9 @@ public class Reservation {
 
     public LocalTime getReservationTime() { return reservationTime; }
     public void setReservationTime(LocalTime reservationTime) { this.reservationTime = reservationTime; }
+
+    public LocalTime getEndTime() { return endTime; }
+    public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
 
     public Integer getPartySize() { return partySize; }
     public void setPartySize(Integer partySize) { this.partySize = partySize; }

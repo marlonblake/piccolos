@@ -39,6 +39,24 @@ import {
 
 const dateLabel = (iso) => (iso === isoDate(0) ? "Today" : iso === isoDate(1) ? "Tomorrow" : iso);
 
+const formatTimeLabel = (hhmm) => {
+    if (!hhmm) return "";
+    const short = String(hhmm).slice(0, 5);
+    if (short === "23:59") return "12:00 AM";
+    const [h, m] = short.split(":").map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) return short;
+    const period = h >= 12 ? "PM" : "AM";
+    const hour12 = h % 12 === 0 ? 12 : h % 12;
+    return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+};
+
+const formatResTimeRange = (r) => {
+    const start = formatTimeLabel(resTime(r));
+    if (!start) return "Time TBC";
+    const end = formatTimeLabel(r.endTime);
+    return end ? `${start} – ${end}` : start;
+};
+
 function UnreadBadge({ count }) {
     if (!count || count <= 0) return null;
     return (
@@ -271,7 +289,7 @@ function ReservationsPanel({ reservations, freshReservations, onSeen, onRefresh,
 
     const renderCard = (r, isPending) => {
         const id = resId(r);
-        const time = resTime(r) || "Time TBC";
+        const timeRange = formatResTimeRange(r);
         const isFresh = freshReservations.has(id);
         const working = busy.isBusy(`res-${id}`);
 
@@ -291,7 +309,7 @@ function ReservationsPanel({ reservations, freshReservations, onSeen, onRefresh,
                 <div className="flex items-start justify-between gap-3 mb-3">
                     <div>
                         <span className="inline-block text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 mb-2">
-                            {dateLabel(resDate(r))} · {time} · Table {r.tableNumber ?? r.tableId}
+                            {dateLabel(resDate(r))} · {timeRange} · Table {r.tableNumber ?? r.tableId}
                         </span>
                         <h3 className="font-serif text-lg font-bold text-[#2C3E2D]">{r.guestName || "Registered Guest"}</h3>
                     </div>
@@ -385,7 +403,7 @@ function ReservationsPanel({ reservations, freshReservations, onSeen, onRefresh,
     );
 }
 
-export default function AdminPOS() {
+export default function AdminQueue() {
     const navigate = useNavigate();
     const later = useLater();
     const [confirm, confirmDialog] = useConfirm();
@@ -479,7 +497,7 @@ export default function AdminPOS() {
                                 kind: "reservation",
                                 targetTab: "reservations",
                                 title: "New Table Reservation",
-                                subtitle: `${r.guestName || "Guest"} · Table ${r.tableNumber ?? r.tableId} · ${dateLabel(resDate(r))} ${resTime(r) || "Time TBC"}`
+                                subtitle: `${r.guestName || "Guest"} · Table ${r.tableNumber ?? r.tableId} · ${dateLabel(resDate(r))} ${formatResTimeRange(r)}`
                             });
                         });
                     }
