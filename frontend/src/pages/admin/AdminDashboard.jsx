@@ -16,6 +16,7 @@ import {
   Tooltip,
   ResponsiveContainer
 } from "recharts";
+import { adminRequest } from "../../api/adminApi";
 
 const todayISO = () => {
   const d = new Date();
@@ -39,28 +40,16 @@ function AdminDashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const token = localStorage.getItem("adminToken");
-        const headers = {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        };
-
-        const [statsRes, resRes] = await Promise.all([
-          fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/full-stats`, { headers }),
-          fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/reservations`, { headers })
+        const [data, resData] = await Promise.all([
+          adminRequest("/admin/full-stats"),
+          adminRequest("/admin/reservations")
         ]);
 
-        if (statsRes.ok) {
-          const data = await statsRes.json();
-          setDashboardData({
-            topStats: { ...dashboardData.topStats, ...data?.topStats },
-            categoryData: asArray(data?.categoryData)
-          });
-        }
-
-        if (resRes.ok) {
-          setReservations(asArray(await resRes.json()));
-        }
+        setDashboardData((prev) => ({
+          topStats: { ...prev.topStats, ...data?.topStats },
+          categoryData: asArray(data?.categoryData)
+        }));
+        setReservations(asArray(resData));
       } catch (error) {
         console.error("Failed to fetch dashboard stats", error);
       }

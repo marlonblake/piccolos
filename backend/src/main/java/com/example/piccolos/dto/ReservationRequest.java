@@ -11,6 +11,7 @@ public class ReservationRequest {
     private Integer partySize;
     private LocalDate reservationDate;
     private LocalTime reservationTime;
+    private LocalTime endTime;
     private String notes;
     private Integer userId;
 
@@ -31,6 +32,9 @@ public class ReservationRequest {
 
     public LocalTime getReservationTime() { return reservationTime; }
     public void setReservationTime(LocalTime reservationTime) { this.reservationTime = reservationTime; }
+
+    public LocalTime getEndTime() { return endTime; }
+    public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }

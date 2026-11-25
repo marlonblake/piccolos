@@ -1,23 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-
-const getDefaultPickup = () => {
-    const d = new Date(Date.now() + 30 * 60 * 1000);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mm = String(d.getMinutes()).padStart(2, '0');
-    return { date: `${y}-${m}-${day}`, time: `${hh}:${mm}` };
-};
-
-const getTodayISO = () => {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-};
+import {
+    getNearestPickupSlot,
+    getValidPickupSlots,
+    formatTimeLabel
+} from '../../utils/timeSlots';
 
 const ShoppingCart = () => {
     const [cartItems, setCartItems] = useState(() => {
@@ -25,9 +12,9 @@ const ShoppingCart = () => {
         return savedCart ? JSON.parse(savedCart) : [];
     });
 
-    const defaultPickup = getDefaultPickup();
-    const [pickupDate, setPickupDate] = useState(defaultPickup.date);
-    const [pickupTime, setPickupTime] = useState(defaultPickup.time);
+    const initialPickup = useMemo(() => getNearestPickupSlot(), []);
+    const [pickupDate, setPickupDate] = useState(initialPickup.date);
+    const [pickupTime, setPickupTime] = useState(initialPickup.time);
     const [checkoutError, setCheckoutError] = useState("");
 
     const [showAuthPrompt, setShowAuthPrompt] = useState(false);
@@ -40,6 +27,14 @@ const ShoppingCart = () => {
     const [orderSuccess, setOrderSuccess] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
     const navigate = useNavigate();
+
+    const validPickupSlots = useMemo(() => getValidPickupSlots(pickupDate), [pickupDate]);
+
+    useEffect(() => {
+        if (validPickupSlots.length > 0 && !validPickupSlots.includes(pickupTime)) {
+            setPickupTime(validPickupSlots[0]);
+        }
+    }, [validPickupSlots, pickupTime]);
 
     const updateCartState = (newCart) => {
         setCartItems(newCart);
@@ -92,9 +87,8 @@ const ShoppingCart = () => {
         if (!pickupDate || !pickupTime) {
             return "Please select a pickup date and time.";
         }
-        const selected = new Date(`${pickupDate}T${pickupTime}:00`);
-        if (Number.isNaN(selected.getTime()) || selected < new Date()) {
-            return "Pickup time cannot be in the past.";
+        if (validPickupSlots.length === 0 || !validPickupSlots.includes(pickupTime)) {
+            return "Please select a valid upcoming pickup slot.";
         }
         return "";
     };
@@ -202,7 +196,7 @@ const ShoppingCart = () => {
                     </div>
                     <h2 style={{ fontSize: '26px', fontWeight: '900', color: '#1a1a1a', marginBottom: '12px' }}>Order Placed Successfully!</h2>
                     <p style={{ fontSize: '16px', color: '#666', marginBottom: '10px', lineHeight: '1.5' }}>
-                        Thank you for your order. Your pickup is scheduled for <strong>{pickupDate} at {pickupTime}</strong>.
+                        Thank you for your order. Your pickup is scheduled for <strong>{pickupDate} at {formatTimeLabel(pickupTime)}</strong>.
                     </p>
                     <p style={{ fontSize: '14px', color: '#888', marginBottom: '30px' }}>
                         The kitchen has received it and will have it ready for collection.
@@ -323,12 +317,15 @@ const ShoppingCart = () => {
                             <h3 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: '800', color: '#1a1a1a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                 Store Pickup
                             </h3>
+                            <p style={{ margin: '0 0 14px 0', fontSize: '13px', color: '#666' }}>
+                                Pickup available daily from 12:30 PM to 12:00 AM.
+                            </p>
                             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                                 <label style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: '700', color: '#333' }}>
                                     Pickup Date
                                     <input
                                         type="date"
-                                        min={getTodayISO()}
+                                        min={initialPickup.minDate}
                                         value={pickupDate}
                                         onChange={(e) => {
                                             setPickupDate(e.target.value);
@@ -340,16 +337,21 @@ const ShoppingCart = () => {
                                 </label>
                                 <label style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: '700', color: '#333' }}>
                                     Pickup Time
-                                    <input
-                                        type="time"
+                                    <select
                                         value={pickupTime}
                                         onChange={(e) => {
                                             setPickupTime(e.target.value);
                                             setCheckoutError("");
                                         }}
                                         required
-                                        style={{ padding: '12px 14px', borderRadius: '12px', border: '1px solid #e0e0e0', fontSize: '15px', outline: 'none' }}
-                                    />
+                                        style={{ padding: '12px 14px', borderRadius: '12px', border: '1px solid #e0e0e0', fontSize: '15px', outline: 'none', backgroundColor: '#fff' }}
+                                    >
+                                        {validPickupSlots.map((slot) => (
+                                            <option key={slot} value={slot}>
+                                                {formatTimeLabel(slot)}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </label>
                             </div>
                         </div>
@@ -406,7 +408,7 @@ const ShoppingCart = () => {
                             <form onSubmit={handleGuestSubmit} style={{ textAlign: 'left' }}>
                                 <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#1a1a1a', margin: '0 0 8px 0', textAlign: 'center' }}>Guest Details</h3>
                                 <p style={{ fontSize: '13px', color: '#666', marginBottom: '20px', textAlign: 'center' }}>
-                                    Pickup: <strong>{pickupDate} at {pickupTime}</strong>
+                                    Pickup: <strong>{pickupDate} at {formatTimeLabel(pickupTime)}</strong>
                                 </p>
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '18px' }}>

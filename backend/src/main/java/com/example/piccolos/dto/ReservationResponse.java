@@ -14,6 +14,7 @@ public class ReservationResponse {
     private Integer userId;
     private String reservationDate;
     private String reservationTime;
+    private String endTime;
     private String notes;
     private String status;
 
@@ -42,6 +43,10 @@ public class ReservationResponse {
         if (reservation.getReservationTime() != null) {
             this.reservationTime = reservation.getReservationTime().toString();
         }
+
+        if (reservation.getEndTime() != null) {
+            this.endTime = reservation.getEndTime().toString();
+        }
     }
 
     public Integer getReservationId() { return reservationId; }
@@ -54,6 +59,7 @@ public class ReservationResponse {
     public Integer getUserId() { return userId; }
     public String getReservationDate() { return reservationDate; }
     public String getReservationTime() { return reservationTime; }
+    public String getEndTime() { return endTime; }
     public String getNotes() { return notes; }
     public String getStatus() { return status; }
 }

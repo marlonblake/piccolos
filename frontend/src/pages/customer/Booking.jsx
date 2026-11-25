@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     CalendarDays,
@@ -10,21 +10,23 @@ import {
     StickyNote,
     Armchair
 } from 'lucide-react';
-
-const getTodayLocal = () => {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-};
+import {
+    HOURS,
+    minsToHHMM,
+    hhmmToMins,
+    formatTimeLabel,
+    getNearestReservationSlot,
+    getValidReservationStartSlots,
+    getValidReservationEndSlots
+} from '../../utils/timeSlots';
 
 export default function Booking() {
     const navigate = useNavigate();
-    const today = getTodayLocal();
+    const initial = useMemo(() => getNearestReservationSlot(), []);
 
-    const [date, setDate] = useState(today);
-    const [time, setTime] = useState('19:00');
+    const [date, setDate] = useState(initial.date);
+    const [time, setTime] = useState(initial.startTime);
+    const [endTime, setEndTime] = useState(initial.endTime);
     const [partySize, setPartySize] = useState(2);
 
     const [guestName, setGuestName] = useState('');
@@ -41,8 +43,24 @@ export default function Booking() {
     const [submitting, setSubmitting] = useState(false);
     const [bookingComplete, setBookingComplete] = useState(false);
 
+    const validStartSlots = useMemo(() => getValidReservationStartSlots(date), [date]);
+    const validEndSlots = useMemo(() => getValidReservationEndSlots(time), [time]);
+
+    useEffect(() => {
+        if (validStartSlots.length > 0 && !validStartSlots.includes(time)) {
+            setTime(validStartSlots[0]);
+        }
+    }, [validStartSlots, time]);
+
+    useEffect(() => {
+        if (validEndSlots.length > 0 && !validEndSlots.includes(endTime)) {
+            const preferred = minsToHHMM(Math.min(hhmmToMins(time) + 60, HOURS.CLOSE_MINS));
+            setEndTime(validEndSlots.includes(preferred) ? preferred : validEndSlots[0]);
+        }
+    }, [validEndSlots, time, endTime]);
+
     const checkAvailability = useCallback(async () => {
-        if (!date) return;
+        if (!date || !time || !endTime || hhmmToMins(endTime) <= hhmmToMins(time)) return;
 
         setError('');
         setMessage('');
@@ -52,7 +70,7 @@ export default function Booking() {
             setChecking(true);
 
             const response = await fetch(
-                `${import.meta.env.VITE_API_BASE_URL}/api/reservations/availability?date=${date}&time=${time}:00&partySize=${partySize}`
+                `${import.meta.env.VITE_API_BASE_URL}/api/reservations/availability?date=${date}&time=${time}:00&endTime=${endTime}:00&partySize=${partySize}`
             );
 
             const data = await response.json().catch(() => null);
@@ -84,7 +102,7 @@ export default function Booking() {
         } finally {
             setChecking(false);
         }
-    }, [date, time, partySize]);
+    }, [date, time, endTime, partySize]);
 
     useEffect(() => {
         checkAvailability();
@@ -122,6 +140,7 @@ export default function Booking() {
                         partySize,
                         reservationDate: date,
                         reservationTime: `${time}:00`,
+                        endTime: `${endTime}:00`,
                         notes: finalNote,
                         userId: userId ? Number(userId) : null
                     })
@@ -167,7 +186,7 @@ export default function Booking() {
                     <div className="bg-[#FDFBF7] rounded-2xl p-6 text-left mb-8 space-y-1">
                         <p><strong>Guest:</strong> {guestName}</p>
                         <p><strong>Date:</strong> {date}</p>
-                        <p><strong>Time:</strong> {time}</p>
+                        <p><strong>Time:</strong> {formatTimeLabel(time)} – {formatTimeLabel(endTime)}</p>
                         <p><strong>Guests:</strong> {partySize}{extraSeats > 0 ? ` (+${extraSeats} extra seat${extraSeats > 1 ? 's' : ''})` : ''}</p>
                         <p><strong>Table:</strong> Table {selectedTable?.tableNumber}</p>
                         {notes.trim() && <p><strong>Note:</strong> {notes.trim()}</p>}
@@ -195,13 +214,13 @@ export default function Booking() {
                         Book a Table
                     </h1>
                     <p className="text-gray-600 mt-4">
-                        Select your preferred date, time, and party size to find an available table.
+                        Open daily from 12:00 PM to 12:00 AM. Select your date, time slot, and party size.
                     </p>
                 </div>
 
                 <div className="bg-white rounded-3xl shadow-xl p-6 md:p-10">
                     <form onSubmit={handleBooking}>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                             <div>
                                 <label className="block font-semibold mb-2 text-[#2C3E2D]">
                                     <CalendarDays className="inline mr-2" size={18} />
@@ -209,7 +228,7 @@ export default function Booking() {
                                 </label>
                                 <input
                                     type="date"
-                                    min={today}
+                                    min={initial.minDate}
                                     value={date}
                                     onChange={(e) => setDate(e.target.value)}
                                     className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#D45D3C]"
@@ -220,22 +239,36 @@ export default function Booking() {
                             <div>
                                 <label className="block font-semibold mb-2 text-[#2C3E2D]">
                                     <Clock className="inline mr-2" size={18} />
-                                    Time
+                                    Start Time
                                 </label>
                                 <select
                                     value={time}
                                     onChange={(e) => setTime(e.target.value)}
                                     className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#D45D3C]"
                                 >
-                                    <option value="17:00">5:00 PM</option>
-                                    <option value="17:30">5:30 PM</option>
-                                    <option value="18:00">6:00 PM</option>
-                                    <option value="18:30">6:30 PM</option>
-                                    <option value="19:00">7:00 PM</option>
-                                    <option value="19:30">7:30 PM</option>
-                                    <option value="20:00">8:00 PM</option>
-                                    <option value="20:30">8:30 PM</option>
-                                    <option value="21:00">9:00 PM</option>
+                                    {validStartSlots.map((slot) => (
+                                        <option key={slot} value={slot}>
+                                            {formatTimeLabel(slot)}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block font-semibold mb-2 text-[#2C3E2D]">
+                                    <Clock className="inline mr-2" size={18} />
+                                    End Time
+                                </label>
+                                <select
+                                    value={endTime}
+                                    onChange={(e) => setEndTime(e.target.value)}
+                                    className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#D45D3C]"
+                                >
+                                    {validEndSlots.map((slot) => (
+                                        <option key={slot} value={slot}>
+                                            {formatTimeLabel(slot)}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
 

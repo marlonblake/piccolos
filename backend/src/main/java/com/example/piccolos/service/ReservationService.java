@@ -13,15 +13,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
 public class ReservationService {
 
-    private static final long RESERVATION_DURATION_MINUTES = 90;
+    private static final ZoneId RESTAURANT_ZONE = ZoneId.of("Asia/Colombo");
+    private static final LocalTime OPEN_TIME = LocalTime.of(12, 0);
+    private static final LocalTime CLOSE_TIME = LocalTime.of(23, 59);
+    private static final LocalTime LAST_START_TIME = LocalTime.of(23, 30);
+    private static final long DEFAULT_DURATION_MINUTES = 60;
 
     private final ReservationRepository reservationRepository;
     private final RestaurantTableRepository tableRepository;
@@ -39,28 +43,22 @@ public class ReservationService {
 
     public List<RestaurantTable> getAvailableTables(
             LocalDate date,
-            LocalTime time,
+            LocalTime startTime,
+            LocalTime endTime,
             int partySize
     ) {
         if (partySize <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Party size must be greater than zero.");
         }
-        if (date == null || time == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Date and time are required.");
-        }
-        if (date.isBefore(LocalDate.now())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation date cannot be in the past.");
-        }
-        if (date.equals(LocalDate.now()) && time.isBefore(LocalTime.now())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation time cannot be in the past.");
-        }
+        LocalTime resolvedEnd = resolveEndTime(startTime, endTime);
+        validateDateTimeRange(date, startTime, resolvedEnd);
 
         List<RestaurantTable> suitableTables =
                 tableRepository.findByCapacityGreaterThanEqual(partySize);
 
         List<Integer> reservedTableIds = reservationRepository.findByReservationDate(date).stream()
                 .filter(r -> !"CANCELLED".equalsIgnoreCase(r.getStatus()))
-                .filter(r -> r.getRestaurantTable() != null && isOverlapping(r.getReservationTime(), time))
+                .filter(r -> r.getRestaurantTable() != null && isOverlapping(r, startTime, resolvedEnd))
                 .map(r -> r.getRestaurantTable().getId())
                 .toList();
 
@@ -140,9 +138,47 @@ public class ReservationService {
         return new ReservationResponse(reservationRepository.save(reservation));
     }
 
-    private boolean isOverlapping(LocalTime existingTime, LocalTime requestedTime) {
-        if (existingTime == null || requestedTime == null) return false;
-        return Math.abs(Duration.between(existingTime, requestedTime).toMinutes()) < RESERVATION_DURATION_MINUTES;
+    private LocalTime resolveEndTime(LocalTime startTime, LocalTime endTime) {
+        if (endTime != null) {
+            return endTime.equals(LocalTime.MIDNIGHT) ? CLOSE_TIME : endTime;
+        }
+        if (startTime == null) return null;
+        LocalTime fallback = startTime.plusMinutes(DEFAULT_DURATION_MINUTES);
+        return fallback.isBefore(startTime) ? CLOSE_TIME : fallback;
+    }
+
+    private boolean isOverlapping(Reservation existing, LocalTime reqStart, LocalTime reqEnd) {
+        LocalTime existingStart = existing.getReservationTime();
+        if (existingStart == null || reqStart == null || reqEnd == null) return false;
+        LocalTime existingEnd = resolveEndTime(existingStart, existing.getEndTime());
+        return existingStart.isBefore(reqEnd) && existingEnd.isAfter(reqStart);
+    }
+
+    private void validateDateTimeRange(LocalDate date, LocalTime startTime, LocalTime endTime) {
+        if (date == null || startTime == null || endTime == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Date, start time, and end time are required.");
+        }
+        if (startTime.isBefore(OPEN_TIME) || startTime.isAfter(LAST_START_TIME)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservations are only available between 12:00 PM and 12:00 AM.");
+        }
+        if (startTime.getMinute() % 30 != 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start time must be in 30-minute intervals.");
+        }
+        if (!endTime.equals(CLOSE_TIME) && endTime.getMinute() % 30 != 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End time must be in 30-minute intervals.");
+        }
+        if (!endTime.isAfter(startTime)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End time must be after start time.");
+        }
+
+        LocalDate today = LocalDate.now(RESTAURANT_ZONE);
+        LocalTime now = LocalTime.now(RESTAURANT_ZONE);
+        if (date.isBefore(today)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation date cannot be in the past.");
+        }
+        if (date.equals(today) && startTime.isBefore(now)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation time cannot be in the past.");
+        }
     }
 
     private void validateRequest(ReservationRequest request) {
@@ -161,16 +197,10 @@ public class ReservationService {
         if (request.getPartySize() == null || request.getPartySize() <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid party size.");
         }
-        if (request.getReservationDate() == null || request.getReservationTime() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Date and time are required.");
-        }
-        if (request.getReservationDate().isBefore(LocalDate.now())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation date cannot be in the past.");
-        }
-        if (request.getReservationDate().equals(LocalDate.now())
-                && request.getReservationTime().isBefore(LocalTime.now())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation time cannot be in the past.");
-        }
+
+        LocalTime resolvedEnd = resolveEndTime(request.getReservationTime(), request.getEndTime());
+        request.setEndTime(resolvedEnd);
+        validateDateTimeRange(request.getReservationDate(), request.getReservationTime(), resolvedEnd);
     }
 
     private RestaurantTable getBookableTable(ReservationRequest request, Integer excludedReservationId) {
@@ -188,12 +218,12 @@ public class ReservationService {
                 .filter(r -> !"CANCELLED".equalsIgnoreCase(r.getStatus()))
                 .filter(r -> r.getRestaurantTable() != null && r.getRestaurantTable().getId().equals(table.getId()))
                 .filter(r -> excludedReservationId == null || !r.getId().equals(excludedReservationId))
-                .anyMatch(r -> isOverlapping(r.getReservationTime(), request.getReservationTime()));
+                .anyMatch(r -> isOverlapping(r, request.getReservationTime(), request.getEndTime()));
 
         if (alreadyReserved) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "This table is already reserved around the selected time."
+                    "This table is already reserved during the selected time slot."
             );
         }
         return table;
@@ -205,6 +235,7 @@ public class ReservationService {
         reservation.setPartySize(request.getPartySize());
         reservation.setReservationDate(request.getReservationDate());
         reservation.setReservationTime(request.getReservationTime());
+        reservation.setEndTime(request.getEndTime());
         reservation.setRestaurantTable(table);
         reservation.setNotes(
                 request.getNotes() != null && !request.getNotes().isBlank()

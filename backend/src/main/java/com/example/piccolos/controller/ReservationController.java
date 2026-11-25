@@ -26,9 +26,10 @@ public class ReservationController {
     public ResponseEntity<List<RestaurantTableResponse>> getAvailability(
             @RequestParam LocalDate date,
             @RequestParam LocalTime time,
+            @RequestParam(required = false) LocalTime endTime,
             @RequestParam int partySize
     ) {
-        List<RestaurantTableResponse> tables = reservationService.getAvailableTables(date, time, partySize)
+        List<RestaurantTableResponse> tables = reservationService.getAvailableTables(date, time, endTime, partySize)
                 .stream()
                 .map(RestaurantTableResponse::new)
                 .toList();
