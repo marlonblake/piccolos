@@ -1,9 +1,7 @@
 package com.example.piccolos.repository;
 
 import com.example.piccolos.entity.RestaurantTable;
-import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -20,7 +18,6 @@ public interface RestaurantTableRepository extends JpaRepository<RestaurantTable
 
     boolean existsByTableNumberAndIdNot(int tableNumber, Integer id);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT t FROM RestaurantTable t WHERE t.id = :id")
+    @Query(value = "SELECT * FROM restaurant_tables WHERE id = :id FOR UPDATE", nativeQuery = true)
     Optional<RestaurantTable> findByIdForUpdate(@Param("id") Integer id);
 }
