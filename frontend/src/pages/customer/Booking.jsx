@@ -122,17 +122,25 @@ export default function Booking() {
         try {
             setSubmitting(true);
 
-            const userId = localStorage.getItem('userId');
+            const token = localStorage.getItem('customerToken');
+            const rawUserId = token ? localStorage.getItem('userId') : null;
+            const parsedUserId = rawUserId && !Number.isNaN(Number(rawUserId)) ? Number(rawUserId) : null;
+
             const noteParts = [];
             if (extraSeats > 0) noteParts.push(`Extra seats needed: ${extraSeats}`);
             if (notes.trim()) noteParts.push(notes.trim());
             const finalNote = noteParts.length > 0 ? noteParts.join(' | ') : null;
 
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const response = await fetch(
                 `${import.meta.env.VITE_API_BASE_URL}/api/reservations`,
                 {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers,
                     body: JSON.stringify({
                         guestName,
                         guestPhone,
@@ -142,7 +150,7 @@ export default function Booking() {
                         reservationTime: `${time}:00`,
                         endTime: `${endTime}:00`,
                         notes: finalNote,
-                        userId: userId ? Number(userId) : null
+                        userId: parsedUserId
                     })
                 }
             );

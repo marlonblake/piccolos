@@ -4,7 +4,6 @@ import com.example.piccolos.dto.ReservationRequest;
 import com.example.piccolos.dto.ReservationResponse;
 import com.example.piccolos.entity.Reservation;
 import com.example.piccolos.entity.RestaurantTable;
-import com.example.piccolos.entity.User;
 import com.example.piccolos.repository.ReservationRepository;
 import com.example.piccolos.repository.RestaurantTableRepository;
 import com.example.piccolos.repository.UserRepository;
@@ -244,9 +243,9 @@ public class ReservationService {
         );
 
         if (request.getUserId() != null) {
-            User user = userRepository.findById(request.getUserId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found."));
-            reservation.setUser(user);
+            reservation.setUser(userRepository.findById(request.getUserId()).orElse(null));
+        } else {
+            reservation.setUser(null);
         }
     }
 }
